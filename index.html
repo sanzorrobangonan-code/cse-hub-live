@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#3B5BDB" />
+  <link rel="manifest" href="/manifest.json" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>CSE Pro Reviewer</title>
+</head>
+
+<body>
+  <div id="app-root">
+
+    <div id="screen-home" class="screen">
+      <div class="home-header">
+        <div class="home-header-top">
+          <div class="home-header-text">
+            <div class="home-greeting">Good day,</div>
+            <div class="home-name" id="home-name">Reviewer</div>
+            <div class="home-date" id="home-date"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="refresh-btn" id="refresh-btn" onclick="refreshUserData()" title="Refresh data">↻</button>
+            <img src="/logo.png" alt="CSE Pro" class="home-logo" />
+          </div>
+        </div>
+        <div class="streak-card">
+          <div class="streak-top-row">
+            <div class="streak-left">
+              <div class="streak-flame">🔥</div>
+              <div>
+                <div style="display:flex;align-items:baseline;gap:6px;">
+                  <div class="streak-count" id="streak-count">0</div>
+                  <div class="streak-label">day streak</div>
+                </div>
+                <div class="streak-best" id="streak-best">Start today! 💪</div>
+              </div>
+            </div>
+            <div class="streak-badge" id="streak-badge">🌱 Beginner</div>
+          </div>
+          <div class="streak-week-row" id="streak-week-row"></div>
+        </div>
+      </div>
+      <div class="scroll-area">
+        <div class="section-title">📊 Recent Quizzes</div>
+        <div class="history-sort-row">
+          <button class="history-sort-btn active" id="sort-date-btn" onclick="sortHistory('date')">🕐 Date</button>
+          <button class="history-sort-btn" id="sort-score-btn" onclick="sortHistory('score')">📈 Score</button>
+          <button class="history-sort-btn" id="sort-subject-btn" onclick="sortHistory('subject')">📚 Subject</button>
+        </div>
+        <div id="quiz-history-list">
+          <div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">Loading history…</div>
+        </div>
+        <div class="section-title">💡 Recommended for You</div>
+        <div class="rec-card" id="rec-card" onclick="goToRecommendation()">
+          <div class="rec-label" id="rec-label">Study Recommendation</div>
+          <div class="rec-topic" id="rec-topic">Loading…</div>
+          <div class="rec-why" id="rec-why">Calculating your weakest area…</div>
+          <div class="rec-cta">Start Quiz Now →</div>
+        </div>
+        <div class="section-title">🗺️ Study Map</div>
+        <div class="study-map-card">
+          <div class="study-map-title">Your Preparedness</div>
+          <div class="study-map-sub">Tap any topic to practice it now</div>
+          <div id="study-map-body">
+            <div style="color:var(--ink-lt);font-size:13px;padding:12px 0;">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-quiz-home" class="screen">
+      <div class="quiz-home-header">
+        <div class="quiz-home-title">Daily Quiz</div>
+        <div class="quiz-home-sub">Choose a subject or challenge yourself</div>
+      </div>
+      <div class="scroll-area">
+        <div class="section-title">⚡ Quick Practice</div>
+        <div class="quick-option-row">
+          <div class="quick-opt-card" onclick="startRandomQuiz()">
+            <div style="font-size:28px;">🎲</div>
+            <div class="quick-opt-label">Random Mix</div>
+            <div class="quick-opt-sub">10 random questions from all subjects</div>
+          </div>
+        </div>
+        <div class="section-title">🗺️ Study Map — Tap a Topic to Quiz</div>
+        <div class="study-map-card">
+          <div id="study-map-body-quiz">
+            <div style="color:var(--ink-lt);font-size:13px;padding:12px 0;">Loading…</div>
+          </div>
+        </div>
+        <div class="mini-cse-card" id="mini-cse-card" onclick="handleMiniCSE()">
+          <div class="mini-cse-inner">
+            <div style="font-size:36px;flex-shrink:0;">🎯</div>
+            <div style="flex:1;">
+              <div class="mini-cse-title">Mini Civil Service Exam</div>
+              <div class="mini-cse-desc">45 questions across all subjects — just like the real thing</div>
+              <div class="mini-cse-badge" id="mini-cse-badge">🔓 Ready! Tap to start</div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-test-card" id="mock-test-card" onclick="startMockTest()">
+          <div class="mini-cse-inner">
+            <div style="font-size:36px;flex-shrink:0;">📋</div>
+            <div style="flex:1;">
+              <div class="mini-cse-title">Mock Test</div>
+              <div class="mini-cse-desc" id="mock-test-desc">Full-length timed exam simulation</div>
+              <div class="mini-cse-badge" id="mock-test-badge"
+                style="background:var(--green-lt);color:var(--green-dk);border-color:var(--green);">📋 Tap to start
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-quiz-q" class="screen">
+      <div class="quiz-topbar">
+        <button class="quiz-exit-btn" onclick="confirmExitQuiz()">✕</button>
+        <div class="quiz-progress-wrap">
+          <div class="quiz-progress-label" id="q-progress-label">Question 1 of 10</div>
+          <div class="quiz-timer" id="quiz-timer" style="display:none;">⏱ --:--</div>
+          <div class="quiz-prog-bar">
+            <div class="quiz-prog-fill" id="q-prog-fill" style="width:10%"></div>
+          </div>
+        </div>
+        <button class="quiz-bookmark-btn" id="bm-btn" onclick="toggleBookmark()">☆</button>
+      </div>
+      <div class="quiz-nav-strip" id="quiz-nav-strip" style="display:none;"></div>
+      <div class="quiz-q-scroll" id="quiz-q-scroll">
+        <div class="quiz-subject-tag" id="q-subject-tag"></div>
+        <div class="quiz-question-text" id="q-text"></div>
+        <div class="quiz-choices" id="q-choices"></div>
+        <div class="quiz-explanation" id="q-explanation">
+          <div class="expl-label">Explanation</div>
+          <div class="expl-text" id="q-expl-text"></div>
+        </div>
+      </div>
+      <div class="quiz-next-bar" id="quiz-next-bar">
+        <button class="quiz-next-btn" id="quiz-next-btn" onclick="quizNext()">Next →</button>
+      </div>
+    </div>
+
+    <div id="screen-quiz-result" class="screen">
+      <div class="result-hero">
+        <div class="result-emoji" id="res-emoji">⭐</div>
+        <div class="result-score" id="res-score">0%</div>
+        <div class="result-label" id="res-label">0 of 0 correct</div>
+        <div class="result-message" id="res-message">Great job!</div>
+      </div>
+      <div class="result-stat-row">
+        <div class="result-stat">
+          <div class="result-stat-num" id="res-correct">0</div>
+          <div class="result-stat-lbl">Correct</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-num" id="res-wrong">0</div>
+          <div class="result-stat-lbl">Wrong</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-num" id="res-time">0s</div>
+          <div class="result-stat-lbl">Time</div>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-outline btn-sm" style="flex:1" onclick="exitQuizResult()">Done</button>
+        <button class="btn btn-green" style="flex:1" onclick="retryQuiz()">Retake 🔄</button>
+        <button class="btn btn-green" style="flex:1;background:var(--blue);box-shadow:0 5px 0 var(--blue-dk);"
+          onclick="generateNewQuiz()">New Quiz ✨</button>
+      </div>
+      <div class="scroll-area" id="res-review"></div>
+    </div>
+
+    <div id="screen-cards" class="screen">
+      <div class="cards-header">
+        <div class="cards-title">Flash Cards</div>
+        <div class="cards-subtitle">Tap a card to reveal the answer</div>
+      </div>
+      <div class="cards-filter-wrap" id="cards-filter"></div>
+      <div class="flashcard-area" id="flashcard-area">
+        <div class="fc-empty">
+          <div class="fc-empty-icon">🃏</div>
+          <div class="fc-empty-title">Pick a subject above</div>
+          <div class="fc-empty-sub">Tap any subject chip to begin reviewing</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-bookmarks" class="screen">
+      <div class="screen-header">
+        <div class="screen-header-title">⭐ Saved Questions</div>
+        <div class="screen-header-sub" id="bm-count">0 saved</div>
+      </div>
+      <div class="bm-filter" id="bm-filter"></div>
+      <div class="scroll-area" id="bm-list"></div>
+    </div>
+
+    <div id="screen-profile" class="screen">
+      <div class="profile-hero">
+        <div class="profile-avatar" id="prof-avatar">👤</div>
+        <div class="profile-name" id="prof-name">Reviewer</div>
+        <div class="profile-email" id="prof-email"></div>
+        <div class="profile-since" id="prof-since"></div>
+      </div>
+      <div class="scroll-area">
+        <div class="profile-stats-grid" id="profile-stats"></div>
+        <div class="premium-banner" onclick="showPremiumModal()">
+          <div class="premium-icon">⭐</div>
+          <div style="flex:1;">
+            <div class="premium-banner-title">Upgrade to Premium</div>
+            <div class="premium-banner-sub">Unlock all subjects, unlimited quizzes &amp; more</div>
+          </div>
+          <div class="premium-arrow">›</div>
+        </div>
+        <div class="section-title">📈 Subject Progress</div>
+        <div id="profile-progress-overview"></div>
+        <div class="section-title">⚙️ Settings</div>
+        <div class="settings-card">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Exam Type</div>
+              <div class="setting-sub" id="exam-type-label">SubProfessional</div>
+            </div>
+            <div class="toggle-sw" id="exam-type-toggle" onclick="toggleExamType()"></div>
+          </div>
+          <div class="setting-divider"></div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Dark Mode</div>
+              <div class="setting-sub">Easier on the eyes at night</div>
+            </div>
+            <div class="toggle-sw" id="dark-toggle" onclick="toggleDarkMode()"></div>
+          </div>
+          <div class="setting-divider"></div>
+          <div class="setting-row" onclick="showAbout()" style="cursor:pointer;">
+            <div>
+              <div class="setting-label">About CSE Pro</div>
+              <div class="setting-sub">Version 5.0 · Built for passers</div>
+            </div>
+            <div class="setting-icon">›</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="confirmLogout()">🚪 Sign Out</button>
+      </div>
+    </div>
+
+    <div id="screen-attempt-detail" class="screen">
+      <div class="screen-header">
+        <button class="back-btn-plain" onclick="goBack()">‹ Back</button>
+        <div>
+          <div class="screen-header-title" id="detail-title">Quiz Review</div>
+          <div class="screen-header-sub" id="detail-meta"></div>
+        </div>
+      </div>
+      <div class="scroll-area" id="detail-list">
+        <div style="text-align:center;color:var(--ink-lt);padding:40px 20px;">Loading…</div>
+      </div>
+    </div>
+
+    <div id="screen-about" class="screen">
+      <div class="about-hero">
+        <img src="/logo.png" alt="CSE Pro" class="about-logo" />
+        <div class="about-hero-title">CSE Pro Reviewer</div>
+        <div class="about-hero-sub">Your smartest path to civil service eligibility</div>
+        <div class="about-hero-chips">
+          <span class="about-chip">📋 Sub-Professional</span>
+          <span class="about-chip">🎓 Professional</span>
+        </div>
+      </div>
+      <div class="scroll-area">
+
+        <div class="section-title">📌 What is the CSE?</div>
+        <div class="about-card">
+          <div class="about-card-body">
+            The <strong>Civil Service Examination (CSE)</strong> is the Philippines' mandatory gateway to permanent government employment, administered by the Civil Service Commission (CSC). Passing it gives you <em>civil service eligibility</em> — the #1 legal requirement for any plantilla position.
+          </div>
+          <div class="about-alert">
+            ⚠️ Over <strong>80–85%</strong> of all test-takers fail every cycle. The national passing rate has hovered between <strong>9–18%</strong> for the past decade. Structured, focused review is what separates passers from the rest.
+          </div>
+        </div>
+
+        <div class="section-title">⚖️ Two Exam Levels</div>
+        <div class="about-level-row">
+          <div class="about-level-card subpro">
+            <div class="about-level-badge">Sub-Professional</div>
+            <div class="about-level-icon">📋</div>
+            <div class="about-level-items">
+              <div class="about-level-item">🕐 2 hrs 40 min</div>
+              <div class="about-level-item">📝 165 items</div>
+              <div class="about-level-item">🎓 HS grad / 2 yrs college</div>
+              <div class="about-level-item">💼 1st-level gov't positions</div>
+              <div class="about-level-item">📁 Includes Clerical Ability</div>
+            </div>
+          </div>
+          <div class="about-level-card pro">
+            <div class="about-level-badge">Professional</div>
+            <div class="about-level-icon">🎓</div>
+            <div class="about-level-items">
+              <div class="about-level-item">🕐 3 hrs 10 min</div>
+              <div class="about-level-item">📝 170 items</div>
+              <div class="about-level-item">🎓 4-year degree</div>
+              <div class="about-level-item">💼 1st &amp; 2nd-level positions</div>
+              <div class="about-level-item">🧠 Logic &amp; Analogy included</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">📚 Subjects Covered</div>
+        <div class="about-subjects-grid">
+          <div class="about-subj-pill verbal">📝 Verbal Ability<div class="about-subj-sub">Grammar · Vocab · Reading</div></div>
+          <div class="about-subj-pill numerical">🔢 Numerical Ability<div class="about-subj-sub">Arithmetic · Word Problems</div></div>
+          <div class="about-subj-pill analytical">🧩 Analytical Ability<div class="about-subj-sub">Logic · Word Associations</div></div>
+          <div class="about-subj-pill clerical">📋 Clerical Ability<div class="about-subj-sub">Sub-Pro level only</div></div>
+          <div class="about-subj-pill geninfo">🏛️ General Information<div class="about-subj-sub">Constitution · RA 6713 · Env.</div></div>
+        </div>
+
+        <div class="about-pass-banner">
+          <div class="about-pass-num">80%</div>
+          <div class="about-pass-text">
+            <div class="about-pass-title">Passing Score Required</div>
+            <div class="about-pass-sub">The CSC mandates a strict 80% general rating. No rounding, no curving — 79.99% is a definitive fail.</div>
+          </div>
+        </div>
+
+        <div class="section-title">🚀 How CSE Pro Helps You</div>
+        <div class="about-features-list">
+          <div class="about-feature-row">
+            <div class="about-feature-icon" style="background:var(--blue-lt);">📝</div>
+            <div class="about-feature-info">
+              <div class="about-feature-title">Topic-Focused Quizzes</div>
+              <div class="about-feature-sub">5-question drills per topic so you build mastery fast. Pinpoint weak spots without wasting time.</div>
+            </div>
+          </div>
+          <div class="about-feature-row">
+            <div class="about-feature-icon" style="background:var(--green-lt);">🎯</div>
+            <div class="about-feature-info">
+              <div class="about-feature-title">Mini CSE &amp; Mock Tests</div>
+              <div class="about-feature-sub">Simulate the real exam — a 45-item Mini CSE and a full timed Mock Test with authentic question distribution.</div>
+            </div>
+          </div>
+          <div class="about-feature-row">
+            <div class="about-feature-icon" style="background:var(--gold-lt);">💡</div>
+            <div class="about-feature-info">
+              <div class="about-feature-title">Smart Daily Recommendation</div>
+              <div class="about-feature-sub">The app tells you exactly what to study today — rotating through all subjects all week so nothing gets left behind.</div>
+            </div>
+          </div>
+          <div class="about-feature-row">
+            <div class="about-feature-icon" style="background:var(--purple-lt);">📊</div>
+            <div class="about-feature-info">
+              <div class="about-feature-title">Full Progress Tracking</div>
+              <div class="about-feature-sub">Study Map shows your readiness per subject. Every attempt is saved — review your wrong answers with explanations.</div>
+            </div>
+          </div>
+          <div class="about-feature-row">
+            <div class="about-feature-icon" style="background:var(--orange-lt);">🃏</div>
+            <div class="about-feature-info">
+              <div class="about-feature-title">Flash Cards</div>
+              <div class="about-feature-sub">Quick-flip cards for key terms, laws, and definitions. Perfect for commute reviews.</div>
+            </div>
+          </div>
+          <div class="about-feature-row">
+            <div class="about-feature-icon" style="background:var(--red-lt);">🔥</div>
+            <div class="about-feature-info">
+              <div class="about-feature-title">Streak &amp; Motivation</div>
+              <div class="about-feature-sub">Daily streaks and badges keep you accountable. Consistency is the single biggest predictor of passing.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-cta-card">
+          <div class="about-cta-emoji">🏆</div>
+          <div class="about-cta-title">You Can Pass This Exam</div>
+          <div class="about-cta-body">Most people fail because they don't know what to focus on or they don't practice consistently. CSE Pro is built around exactly what the exam tests. Start with one topic today. Be consistent. You've got this, future government employee! 🇵🇭</div>
+          <button class="about-cta-btn" onclick="goTo('home')">Start Reviewing Now →</button>
+        </div>
+
+        <div class="about-version">CSE Pro · Version 5.0 · Built for passers 🇵🇭</div>
+      </div>
+    </div>
+
+    <nav id="bottom-nav">
+      <button class="nav-item" id="nav-about" onclick="goTo('about')"><span class="nav-icon">📖</span>About</button>
+      <button class="nav-item" id="nav-home" onclick="goTo('home')"><span class="nav-icon">🏠</span>Home</button>
+      <button class="nav-item" id="nav-quiz-home" onclick="goTo('quiz-home')"><span
+          class="nav-icon">📝</span>Quiz</button>
+      <button class="nav-item" id="nav-cards" onclick="goTo('cards')"><span class="nav-icon">🃏</span>Cards</button>
+      <button class="nav-item" id="nav-bookmarks" onclick="goTo('bookmarks')"><span
+          class="nav-icon">⭐</span>Saved</button>
+      <button class="nav-item" id="nav-profile" onclick="goTo('profile')"><span
+          class="nav-icon">👤</span>Profile</button>
+    </nav>
+
+    <div id="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text">Loading…</div>
+    </div>
+    <div id="modal-overlay" onclick="hideModal()">
+      <div id="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions" id="modal-actions"></div>
+      </div>
+    </div>
+    <div id="toast"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
