@@ -1,10 +1,10 @@
 /* Screens.css — screen-specific overrides and responsive fixes */
 
 /* Remove the old per-screen padding since we now have headers */
-#screen-home .scroll-area     { padding-top: 12px; }
-#screen-quiz-home .scroll-area{ padding-top: 16px; }
+#screen-home .scroll-area      { padding-top: 12px; }
+#screen-quiz-home .scroll-area { padding-top: 16px; }
 #screen-cards                  { overflow: hidden; }
-#screen-bookmarks .scroll-area { padding-top: 12px; }
+#screen-mock .scroll-area      { padding-top: 16px; }
 #screen-profile .scroll-area   { padding-top: 16px; }
 
 /* ── Desktop media query: wider layouts ── */
@@ -41,7 +41,7 @@
 #screen-about .scroll-area { padding-top: 16px; }
 
 .about-hero {
-  background: linear-gradient(135deg, #1e3ab8 0%, #3B5BDB 55%, #5C7CFA 100%);
+  background: linear-gradient(135deg, #0C1E78 0%, #1B2FA8 55%, #2B4ACB 100%);
   padding: 28px 20px 24px;
   text-align: center;
   color: #fff;
@@ -63,8 +63,9 @@
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  object-fit: cover;
-  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  object-fit: contain;
+  background: transparent;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
   margin-bottom: 14px;
   position: relative;
   z-index: 1;
@@ -158,7 +159,7 @@
 }
 
 .about-level-card.pro {
-  background: linear-gradient(135deg, #1e3ab8, #5C7CFA);
+  background: linear-gradient(135deg, #0C1E78, #1B2FA8);
   box-shadow: 0 4px 16px rgba(43,74,203,.3);
 }
 
@@ -235,7 +236,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: linear-gradient(135deg, #1e3ab8, #3B5BDB);
+  background: linear-gradient(135deg, #0C1E78, #1B2FA8);
   border-radius: 18px;
   padding: 18px 20px;
   margin-bottom: 4px;
@@ -407,11 +408,23 @@
 .refresh-btn.spinning { animation: spin .7s linear infinite; pointer-events: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* 6-item nav — compact font */
-#bottom-nav .nav-item { font-size: 9px; }
-#bottom-nav .nav-icon { font-size: 17px; }
+/* Nav sizing is now handled by clamp() in base.css — no override needed */
 
 /* ── Scrollbar styling for desktop ── */
 @media (min-width: 600px) {
   .scroll-area::-webkit-scrollbar { width: 5px; }
 }
+
+/* ── DARK MODE OVERRIDES ── */
+body.dark .about-hero { background: transparent; }
+body.dark .about-hero::before {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(36,81,192,0.25) 0%, transparent 70%);
+  background-image: none;
+}
+body.dark .about-alert {
+  background: rgba(245,197,24,0.1);
+  border-left-color: #f5c518;
+  color: rgba(255,255,255,0.65);
+}
+body.dark .about-alert strong { color: #f5c518; }
+body.dark .back-btn-plain { color: #4a8fef; }

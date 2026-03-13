@@ -1,6 +1,7 @@
 import './styles/base.css';
 import './styles/components.css';
 import './styles/screens.css';
+import './styles/desktop.css';
 
 // ═══════════════════════════════════════════════════════════════
 // DATA
@@ -1068,6 +1069,8 @@ let _quizHistoryCache = [];
 let _attemptHistoryCache = [];
 let _topicAttemptCounts = {}; // { dbTopicValue: numberOfDistinctAttemptsThatIncludedThatTopic }
 let _subjectTopics = {}; // { 'Verbal Ability': ['Error Recognition', 'Vocabulary - Word Meaning', ...] }
+let _answeredQuestionIds = new Set(); // all unique question IDs the user has ever answered
+let _answeredQuestionsCache = []; // full question rows for Cards tab (exam-level filtered)
 let _historySortField = 'date';
 let _historySortAsc = false;
 
@@ -1200,17 +1203,25 @@ function goTo(screen) {
   _prevScreen = currentScreen;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
   const el = document.getElementById('screen-' + screen);
   if (el) { el.classList.add('active'); currentScreen = screen; }
   const nav = document.getElementById('nav-' + screen);
   if (nav) nav.classList.add('active');
+  const sidebarNav = document.getElementById('sidebar-nav-' + screen);
+  if (sidebarNav) sidebarNav.classList.add('active');
   const hideNav = ['quiz-q', 'quiz-result', 'attempt-detail'];
   document.getElementById('bottom-nav').style.display = hideNav.includes(screen) ? 'none' : 'flex';
   if (screen === 'home') renderHome();
   if (screen === 'quiz-home') renderQuizHome();
   if (screen === 'cards') renderCardsScreen();
-  if (screen === 'bookmarks') renderBookmarks();
+  if (screen === 'mock') renderMockScreen();
   if (screen === 'profile') renderProfile();
+  // Reset scroll on the active screen's scroll area
+  if (el) {
+    const sa = el.querySelector('.scroll-area');
+    if (sa) sa.scrollTop = 0;
+  }
   window.scrollTo(0, 0);
 }
 
@@ -1283,6 +1294,85 @@ function renderHome() {
 
   renderStudyMap();
   renderQuizHistory();
+  // Defer chart render so canvas has layout dimensions
+  requestAnimationFrame(renderScoreChart);
+
+  // ── Sidebar population ──────────────────────────────────
+  const sidebarStreakCount = document.getElementById('sidebar-streak-count');
+  if (sidebarStreakCount) sidebarStreakCount.textContent = streak;
+
+  const sidebarBadge = document.getElementById('sidebar-streak-badge');
+  if (sidebarBadge) {
+    if (streak === 0) sidebarBadge.textContent = '🌱 Beginner';
+    else if (streak < 3) sidebarBadge.textContent = '📖 Learner';
+    else if (streak < 7) sidebarBadge.textContent = '⚡ Dedicated';
+    else if (streak < 14) sidebarBadge.textContent = '🔥 On Fire';
+    else if (streak < 30) sidebarBadge.textContent = '🏅 Champion';
+    else sidebarBadge.textContent = '🎓 Legend';
+  }
+
+  // Slim header (mobile collapsed state)
+  const slimStreak = document.getElementById('header-slim-streak');
+  if (slimStreak) slimStreak.textContent = streak;
+  const nameEl2 = document.getElementById('home-name');
+  const slimName = document.getElementById('header-slim-name');
+  if (slimName && nameEl2) slimName.textContent = 'Hi, ' + (nameEl2.textContent.split(' ')[0] || nameEl2.textContent);
+
+  // Home mini-avatar: show photo if available, else show initials
+  const homeAv = document.getElementById('home-avatar');
+  if (homeAv) {
+    if (_userAvatarUrl) {
+      applyAvatarToUI(_userAvatarUrl);
+    } else if (currentUser) {
+      const ini = (currentUser.user_metadata?.full_name || currentUser.email || 'R')
+        .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      homeAv.textContent = ini;
+      homeAv.style.backgroundImage = '';
+    }
+  }
+  // Sidebar recommendation
+  const sidebarRecTopic = document.getElementById('sidebar-rec-topic');
+  const sidebarRecWhy = document.getElementById('sidebar-rec-why');
+  const sidebarRecLabel = document.getElementById('sidebar-rec-label');
+  const sidebarRecCard = document.getElementById('sidebar-rec-card');
+  const rec2 = getRecommendation();
+  const dayNames2 = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const daySubject2 = DAILY_ROTATION[new Date().getDay()];
+  const daySubjectLabel2 = DAILY_SUBJECT_LABEL[daySubject2] || 'Mixed';
+  if (sidebarRecLabel) sidebarRecLabel.textContent = `${dayNames2[new Date().getDay()]}'s Focus · ${daySubjectLabel2}`;
+  if (rec2 && sidebarRecTopic) {
+    sidebarRecTopic.textContent = rec2.lesson.icon + ' ' + rec2.lesson.title;
+    if (rec2.type === 'new') sidebarRecWhy.textContent = "Haven't tried this — start now! 🚀";
+    else if (rec2.type === 'weak') sidebarRecWhy.textContent = `Best score: ${rec2.pct}% — push higher! 💪`;
+    else sidebarRecWhy.textContent = 'Keep that perfect score! 🏆';
+    if (sidebarRecCard) sidebarRecCard.onclick = goToRecommendation;
+  } else if (sidebarRecTopic) {
+    sidebarRecTopic.textContent = "🎉 Everything covered!";
+    sidebarRecWhy.textContent = 'Try a Mock Test now!';
+    if (sidebarRecCard) sidebarRecCard.onclick = () => goTo('mock');
+  }
+
+  renderSidebarStudyMap();
+}
+
+function renderSidebarStudyMap() {
+  const body = document.getElementById('sidebar-map-body');
+  if (!body) return;
+  let html = '';
+  SUBJECT_META.forEach(subj => {
+    const pct = getSubjectPreparedness(subj.key);
+    const color = pct >= 80 ? '#16a34a' : pct >= 50 ? '#0d9488' : pct >= 30 ? '#d97706' : pct > 0 ? '#dc2626' : '#d0d5ef';
+    html += `<div class="sidebar-map-row">
+      <div class="sidebar-map-row-top">
+        <span class="sidebar-map-subj-name">${subj.icon} ${subj.label.split(' ')[0]}</span>
+        <span class="sidebar-map-pct" style="color:${color}">${pct}%</span>
+      </div>
+      <div class="sidebar-map-bar">
+        <div class="sidebar-map-bar-fill" style="width:${pct}%;background:${color};"></div>
+      </div>
+    </div>`;
+  });
+  body.innerHTML = html;
 }
 
 function renderStudyMap() {
@@ -1448,22 +1538,33 @@ async function refreshUserData() {
   if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
   try {
     _attemptHistoryCache = await loadQuizHistory();
-    if (_attemptHistoryCache.length) {
-      const stats = getStats();
-      const dbDates = _attemptHistoryCache.map(a => getLocalDateStr(new Date(a.attempted_at)));
-      dbDates.forEach(d => { if (!stats.studiedDates.includes(d)) stats.studiedDates.push(d); });
-      saveStats(stats);
-    }
+    // Replace studiedDates from DB (source of truth) — never merge stale local dates
+    const stats = getStats();
+    stats.studiedDates = [...new Set(
+      _attemptHistoryCache.map(a => getLocalDateStr(parseAttemptedAt(a.attempted_at)))
+    )];
+    saveStats(stats);
     await Promise.all([loadAllSubjectTopics(), loadTopicAttemptCounts()]);
+    await loadAnsweredQuestions();
     renderHome();
     renderQuizHistory();
     renderProfile();
+    renderMockScreen();
     showToast('Data refreshed ✓');
   } catch (e) {
     showToast('Refresh failed');
   } finally {
     if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
   }
+}
+
+function toggleQuizSubject(key) {
+  const list = document.getElementById('quiz-topics-' + key);
+  const chevron = document.getElementById('quiz-chevron-' + key);
+  if (!list) return;
+  const isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.textContent = isOpen ? '▶' : '▼';
 }
 
 function renderStudyMapFlat() {
@@ -1474,17 +1575,18 @@ function renderStudyMapFlat() {
     const subjPct = getSubjectPreparedness(subj.key);
     const barColor = subjPct >= 80 ? '#16a34a' : subjPct >= 50 ? '#0d9488' : subjPct >= 30 ? '#d97706' : subjPct > 0 ? '#dc2626' : '#e5e7eb';
     html += `<div class="map-subject-block">
-      <div class="map-subject-header" style="cursor:default;pointer-events:none;">
+      <div class="map-subject-header" onclick="toggleQuizSubject('${subj.key}')">
         <div class="map-subject-left">
           <span class="map-subj-icon">${subj.icon}</span>
           <span class="map-subj-name">${subj.label}</span>
         </div>
         <div class="map-subject-right">
           <span class="map-subj-pct">${subjPct}%</span>
+          <span class="map-chevron" id="quiz-chevron-${subj.key}" style="margin-left:8px;">▶</span>
         </div>
       </div>
       <div class="map-subj-bar"><div class="map-subj-bar-fill" style="width:${subjPct}%;background:${barColor};"></div></div>
-      <div class="map-topics-list" style="display:block;">`;
+      <div class="map-topics-list" id="quiz-topics-${subj.key}" style="display:none;">`;
 
     const dbTopics = _subjectTopics[subj.label] || [];
     const topicsToRender = dbTopics.length
@@ -1533,7 +1635,6 @@ function renderStudyMapFlat() {
 function renderQuizHome() {
   renderStudyMapFlat();
   renderMiniCSECard();
-  renderMockTestCard();
 }
 
 function renderSubjectGrid() {
@@ -1627,15 +1728,81 @@ async function handleMiniCSE() {
 }
 
 function renderMockTestCard() {
-  const descEl = document.getElementById('mock-test-desc');
-  const badgeEl = document.getElementById('mock-test-badge');
-  if (!descEl || !badgeEl) return;
+  // No-op: mock test card was moved to the dedicated Mock tab
+}
+
+function renderMockScreen() {
   const examType = getUserExamType();
   const cfg = MOCK_TEST_CONFIG[examType] || MOCK_TEST_CONFIG.subpro;
   const hrs = Math.floor(cfg.timeMinutes / 60);
   const mins = cfg.timeMinutes % 60;
-  descEl.textContent = `${cfg.label} — ${cfg.items} items · ${hrs}h ${mins}m`;
-  badgeEl.textContent = '📋 Tap to start your mock exam';
+
+  // Update header subtitle to reflect current exam type + config
+  const subEl = document.getElementById('mock-screen-sub');
+  if (subEl) subEl.textContent = `${cfg.label} · ${cfg.items} items · ${hrs}h ${mins}m`;
+
+  // Render exam info card with stats and start button
+  const infoEl = document.getElementById('mock-exam-info');
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <div class="mock-info-card">
+        <div class="mock-info-row">
+          <div class="mock-info-item">
+            <div class="mock-info-num">${cfg.items}</div>
+            <div class="mock-info-lbl">Questions</div>
+          </div>
+          <div class="mock-info-item">
+            <div class="mock-info-num">${hrs}h ${mins}m</div>
+            <div class="mock-info-lbl">Time Limit</div>
+          </div>
+          <div class="mock-info-item">
+            <div class="mock-info-num">80%</div>
+            <div class="mock-info-lbl">Passing Score</div>
+          </div>
+        </div>
+        <button class="mock-start-btn" onclick="startMockTest()">Start Mock Test →</button>
+      </div>`;
+  }
+
+  // Render mock test history (only mock-test exam_type entries)
+  const histEl = document.getElementById('mock-history-list');
+  if (!histEl) return;
+
+  const mockAttempts = _attemptHistoryCache.filter(a => a.exam_type === 'mock-test');
+  if (!mockAttempts.length) {
+    histEl.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No mock tests yet</div>
+      <div class="empty-sub">Complete your first mock test to track your progress here</div>
+    </div>`;
+    return;
+  }
+
+  histEl.innerHTML = mockAttempts.map(h => {
+    const pct = h.total_questions > 0 ? Math.round((h.score / h.total_questions) * 100) : 0;
+    const scoreClass = pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low';
+    const scoreEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📈' : '💪';
+    const d = parseAttemptedAt(h.attempted_at);
+    const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
+    const enc = encodeURIComponent;
+    const resultLabel = pct >= 80 ? '✅ Passed' : '❌ Keep practicing';
+    return `<div class="history-card score-${scoreClass}"
+      onclick="openAttemptDetail('${h.id}','${enc(h.exam_type || '')}',${h.score},${h.total_questions},'${enc(h.attempted_at || '')}')">
+      <div class="history-score-badge ${scoreClass}" style="flex-direction:column;gap:1px;">
+        <div style="font-size:14px;line-height:1;">${scoreEmoji}</div>
+        <div style="font-size:13px;font-weight:900;">${pct}%</div>
+      </div>
+      <div class="history-info">
+        <div class="history-topic">📋 Mock Test — ${cfg.label}</div>
+        <div class="history-meta">${h.score}/${h.total_questions} correct &nbsp;·&nbsp; ${resultLabel}</div>
+        <div class="history-meta" style="margin-top:1px;">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
+      </div>
+      <div class="history-details">
+        <div style="font-size:20px;color:var(--ink-lt);">›</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function startMockTest() {
@@ -1915,6 +2082,10 @@ async function finishQuiz() {
   stats.totalAnswered = (stats.totalAnswered || 0) + answeredList.length;
   stats.totalCorrect = (stats.totalCorrect || 0) + correct;
   saveStats(stats);
+
+  // Invalidate the answered-questions cache so the Cards tab reflects new answers
+  _answeredQuestionsCache = [];
+  flashState.cards = [];
 }
 
 function retryQuiz() {
@@ -1972,6 +2143,7 @@ async function generateNewQuiz() {
 function exitQuizResult() {
   clearInterval(quizTimerInterval);
   goTo('quiz-home');
+  refreshUserData();
 }
 
 function confirmExitQuiz() {
@@ -2015,7 +2187,18 @@ function toggleBookmark() {
 // ═══════════════════════════════════════════════════════════════
 let flashState = { cards: [], idx: 0, flipped: false, subject: null };
 
-async function renderCardsScreen() {
+function renderCardsScreen() {
+  // Cards are sourced from the user's own answered questions (not the full DB)
+  if (!_answeredQuestionsCache.length) {
+    document.getElementById('cards-filter').innerHTML = '';
+    document.getElementById('flashcard-area').innerHTML = `
+      <div class="fc-empty">
+        <div class="fc-empty-icon">🃏</div>
+        <div class="fc-empty-title">No cards yet</div>
+        <div class="fc-empty-sub">Complete a quiz or mock test — every question you answer will appear here for review</div>
+      </div>`;
+    return;
+  }
   renderCardsFilter();
   if (!flashState.cards.length) {
     document.getElementById('flashcard-area').innerHTML = `
@@ -2032,9 +2215,13 @@ async function renderCardsScreen() {
 function renderCardsFilter() {
   const el = document.getElementById('cards-filter');
   if (!el) return;
+  // Only show subjects that actually have answered questions
+  const answeredSubjects = new Set(_answeredQuestionsCache.map(q => q.subject));
   const chips = [
     { key: 'all', label: '🎲 Mix All' },
-    ...SUBJECT_META.map(s => ({ key: s.key, label: s.icon + ' ' + s.label.split(' ')[0] }))
+    ...SUBJECT_META
+      .filter(s => answeredSubjects.has(s.label))
+      .map(s => ({ key: s.key, label: s.icon + ' ' + s.label.split(' ')[0] }))
   ];
   el.innerHTML = chips.map(c => `
     <button class="cards-filter-btn ${flashState.subject === c.key ? 'active' : ''}"
@@ -2042,28 +2229,24 @@ function renderCardsFilter() {
   ).join('');
 }
 
-async function loadFlashcards(subjectKey) {
+function loadFlashcards(subjectKey) {
   flashState.subject = subjectKey;
   renderCardsFilter();
-  showLoading('Loading flashcards…');
-  try {
-    let rows = [];
-    if (subjectKey === 'all') {
-      // Mix from all subjects
-      for (const subj of SUBJECT_META) {
-        const r = await fetchBySubject(subj.label);
-        rows = rows.concat(r.slice(0, 5));
-      }
-    } else {
-      const subj = SUBJECT_META.find(s => s.key === subjectKey);
-      rows = await fetchBySubject(subj.label);
-    }
-    flashState.cards = shuffle(rows).slice(0, 20);
-    flashState.idx = 0;
-    flashState.flipped = false;
-    hideLoading();
-    renderFlashcard();
-  } catch (e) { hideLoading(); showToast('Could not load flashcards'); }
+  let cards = [];
+  if (subjectKey === 'all') {
+    cards = [..._answeredQuestionsCache];
+  } else {
+    const subj = SUBJECT_META.find(s => s.key === subjectKey);
+    cards = _answeredQuestionsCache.filter(q => q.subject === subj?.label);
+  }
+  if (!cards.length) {
+    showToast('No answered questions for this subject yet');
+    return;
+  }
+  flashState.cards = shuffle(cards);
+  flashState.idx = 0;
+  flashState.flipped = false;
+  renderFlashcard();
 }
 
 function renderFlashcard() {
@@ -2178,6 +2361,94 @@ function removeBookmark(id) {
 // PROFILE SCREEN
 // ═══════════════════════════════════════════════════════════════
 let currentUser = null;
+let _userAvatarUrl = null; // cached public URL of the user's avatar
+
+// ── Apply avatar photo to all UI spots (home mini-avatar, sidebar, profile) ──
+function applyAvatarToUI(url) {
+  // Profile: show <img>, hide initials
+  const img = document.getElementById('prof-avatar-img');
+  const initials = document.getElementById('prof-avatar-initials');
+  if (img && initials) {
+    img.src = url;
+    img.style.display = 'block';
+    initials.style.display = 'none';
+  }
+  // Home mini-avatar
+  const homeAv = document.getElementById('home-avatar');
+  if (homeAv) {
+    homeAv.style.backgroundImage = `url('${url}')`;
+    homeAv.style.backgroundSize = 'cover';
+    homeAv.style.backgroundPosition = 'center';
+    homeAv.textContent = '';
+  }
+}
+
+// ── Load avatar from profiles table and display it ──
+async function loadUserAvatar() {
+  if (!_sb || !currentUser) return;
+  try {
+    const { data, error } = await _sb
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', currentUser.id)
+      .single();
+    if (error || !data?.avatar_url) return;
+    const { data: urlData } = _sb.storage.from('avatars').getPublicUrl(data.avatar_url);
+    if (urlData?.publicUrl) {
+      // Add cache-buster so the browser always fetches the latest image
+      _userAvatarUrl = urlData.publicUrl + '?t=' + Date.now();
+      applyAvatarToUI(_userAvatarUrl);
+    }
+  } catch (e) { }
+}
+
+// ── Upload selected file to Supabase Storage ──
+async function uploadAvatar(file) {
+  if (!_sb || !currentUser) return;
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) {
+    showToast('Only JPG, PNG, or WebP images allowed');
+    return;
+  }
+  if (file.size > 1024 * 1024) {
+    showToast('Image must be under 1MB');
+    return;
+  }
+  showToast('Uploading photo…');
+  try {
+    const path = `${currentUser.id}/avatar.png`;
+    // upsert:true replaces any existing file at the same path
+    const { error: uploadErr } = await _sb.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadErr) throw uploadErr;
+    // Update profiles table so the URL persists across sessions
+    await _sb.from('profiles').upsert({ id: currentUser.id, avatar_url: path }, { onConflict: 'id' });
+    // Get public URL and show immediately
+    const { data: urlData } = _sb.storage.from('avatars').getPublicUrl(path);
+    if (urlData?.publicUrl) {
+      _userAvatarUrl = urlData.publicUrl + '?t=' + Date.now();
+      applyAvatarToUI(_userAvatarUrl);
+    }
+    showToast('Profile photo updated ✓');
+  } catch (e) {
+    console.error('Avatar upload error:', e);
+    showToast('Upload failed: ' + (e?.message || JSON.stringify(e)));
+  }
+}
+
+// ── Trigger the hidden file input ──
+function triggerAvatarUpload() {
+  document.getElementById('avatar-file-input')?.click();
+}
+
+// ── Called by the hidden file input's onchange ──
+async function handleAvatarFileSelect(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  await uploadAvatar(file);
+  event.target.value = ''; // reset so same file can be re-selected
+}
 
 function renderProfile() {
   const stats = getStats();
@@ -2198,7 +2469,12 @@ function renderProfile() {
     const since = new Date(currentUser.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long' });
     document.getElementById('prof-since').textContent = 'Member since ' + since;
     const initials = (currentUser.user_metadata?.full_name || currentUser.email || 'R').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-    document.getElementById('prof-avatar').textContent = initials;
+    const initialsEl = document.getElementById('prof-avatar-initials');
+    if (initialsEl) initialsEl.textContent = initials;
+    // If we already have a cached avatar URL, show photo; otherwise show initials
+    if (_userAvatarUrl) {
+      applyAvatarToUI(_userAvatarUrl);
+    }
   }
 
   // Stats grid
@@ -2258,6 +2534,7 @@ function toggleDarkMode() {
   const dt = document.getElementById('dark-toggle');
   if (dt) dt.classList.toggle('on', darkMode);
   localStorage.setItem('cse_dark', darkMode ? '1' : '0');
+  requestAnimationFrame(renderScoreChart);
 }
 
 function toggleExamType() {
@@ -2265,7 +2542,7 @@ function toggleExamType() {
   const newType = current === 'subpro' ? 'professional' : 'subpro';
   setUserExamType(newType);
   renderProfile();
-  renderMockTestCard();
+  if (currentScreen === 'mock') renderMockScreen();
   showToast(`Exam type set to ${MOCK_TEST_CONFIG[newType].label}`);
 }
 
@@ -2276,7 +2553,11 @@ function confirmLogout() {
       label: 'Sign Out', cls: 'danger', action: async () => {
         hideModal();
         if (_sb) await _sb.auth.signOut();
-        window.location.href = '/login.html';
+        // Clear user-specific local data so the next login starts clean
+        localStorage.removeItem('cse_last_user_id');
+        localStorage.removeItem('cse_stats');
+        localStorage.removeItem('cse_quiz_scores');
+        window.location.href = '/index.html';
       }
     }]);
 }
@@ -2355,8 +2636,21 @@ async function recordAnswer(attemptId, questionId, selectedAnswer, isCorrect) {
 async function finishQuizAttempt(attemptId, score) {
   if (!_sb || !attemptId) return;
   try {
-    await _sb.from('quiz_attempts').update({ score }).eq('id', attemptId);
+    // Write attempted_at at quiz COMPLETION with explicit UTC 'Z' suffix.
+    // Fixes: (1) time was quiz-start not quiz-end, (2) columns stored as TIMESTAMP WITHOUT TIME ZONE
+    // return strings with no timezone suffix, causing browsers to parse as local time, then
+    // toLocale* with timeZone:'Asia/Manila' adds a second shift — producing wrong times.
+    await _sb.from('quiz_attempts').update({ score, attempted_at: new Date().toISOString() }).eq('id', attemptId);
   } catch (e) { }
+}
+
+// Safe timestamp parser — ensures UTC interpretation regardless of Supabase column type.
+// TIMESTAMPTZ → returns "...+00:00" (correct). TIMESTAMP WITHOUT TZ → returns "..." (no suffix).
+// Without 'Z', browsers parse as LOCAL time; toLocale* then double-shifts the timezone.
+function parseAttemptedAt(ts) {
+  if (!ts) return null;
+  const s = String(ts);
+  return new Date(/[Z+\-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z');
 }
 
 // Fetch all quiz_attempts for the logged-in user, newest first
@@ -2412,7 +2706,30 @@ async function loadTopicAttemptCounts() {
 
     _topicAttemptCounts = {};
     Object.keys(sets).forEach(k => { _topicAttemptCounts[k] = sets[k].size; });
+
+    // Stash unique question IDs so loadAnsweredQuestions() can reuse them
+    _answeredQuestionIds = new Set(answers.map(a => a.question_id));
   } catch (e) { console.warn('loadTopicAttemptCounts error:', e); }
+}
+
+// Fetch full question data for every question the user has answered,
+// filtered by their current exam level so the wrong exam's items never appear.
+async function loadAnsweredQuestions() {
+  if (!_sb || !_answeredQuestionIds.size) {
+    _answeredQuestionsCache = [];
+    return;
+  }
+  try {
+    const examLevel = getExamLevelForDB();
+    const ids = [..._answeredQuestionIds];
+    const { data: qRows, error } = await _sb
+      .from('questions')
+      .select('id,subject,topic,question,choice_a,choice_b,choice_c,choice_d,choice_e,correct_answer,explanation,exam_level')
+      .in('id', ids)
+      .or(`exam_level.ilike.${examLevel},exam_level.ilike.both`);
+    if (error) { console.warn('loadAnsweredQuestions error:', error.message); _answeredQuestionsCache = []; return; }
+    _answeredQuestionsCache = (qRows || []).map(mapRow);
+  } catch (e) { console.warn('loadAnsweredQuestions error:', e); _answeredQuestionsCache = []; }
 }
 
 // Fetch all quiz_answers for one attempt, then join questions manually.
@@ -2559,11 +2876,172 @@ function getSubjectIcon(topic) {
   return '📚';
 }
 
+function renderScoreChart() {
+  const canvas = document.getElementById('score-chart');
+  if (!canvas) return;
+
+  // Use last 20 quizzes sorted oldest→newest (exclude mock-test)
+  const items = [..._attemptHistoryCache]
+    .filter(a => a.exam_type !== 'mock-test')
+    .sort((a, b) => parseAttemptedAt(a.attempted_at) - parseAttemptedAt(b.attempted_at))
+    .slice(-20);
+
+  // Readiness badge: average of last 10 scores
+  const last10 = items.slice(-10);
+  const readinessPct = last10.length
+    ? Math.round(last10.reduce((s, a) => s + (a.total_questions > 0 ? (a.score / a.total_questions) * 100 : 0), 0) / last10.length)
+    : null;
+
+  const badge = document.getElementById('readiness-badge');
+  if (badge) {
+    if (readinessPct === null) {
+      badge.textContent = 'No data yet';
+      badge.style.cssText = 'font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;background:#f3f4f6;color:#6b7280;';
+    } else if (readinessPct >= 80) {
+      badge.textContent = '🏆 CSE Ready ' + readinessPct + '%';
+      badge.style.cssText = 'font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;background:#dcfce7;color:#16a34a;';
+    } else if (readinessPct >= 70) {
+      badge.textContent = '✅ Near Ready ' + readinessPct + '%';
+      badge.style.cssText = 'font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;background:#FEF3C7;color:#D97706;';
+    } else {
+      badge.textContent = '📚 Keep Studying ' + readinessPct + '%';
+      badge.style.cssText = 'font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;background:#FEE2E2;color:#B91C1C;';
+    }
+  }
+
+  // Resize canvas to actual display width
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || canvas.parentElement.offsetWidth || 300;
+  const H = 140;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 12, right: 12, bottom: 28, left: 32 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,30,0.07)';
+  const labelColor = isDark ? 'rgba(255,255,255,0.45)' : '#8B8CA8';
+  const lineColor = isDark ? '#4a8fef' : '#2B4ACB';
+  const passColor = isDark ? '#22d3a0' : '#16A34A';
+  const dotFill = isDark ? '#4a8fef' : '#2B4ACB';
+  const dotStroke = isDark ? '#111e3a' : '#fff';
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Y-axis grid lines at 0, 25, 50, 70, 75, 100
+  const yTicks = [0, 25, 50, 75, 100];
+  ctx.font = '9px Nunito, sans-serif';
+  ctx.textAlign = 'right';
+  yTicks.forEach(tick => {
+    const y = PAD.top + chartH - (tick / 100) * chartH;
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + chartW, y); ctx.stroke();
+    ctx.fillStyle = labelColor;
+    ctx.fillText(tick + '%', PAD.left - 4, y + 3.5);
+  });
+
+  // CSE passing line at 80%
+  const passY = PAD.top + chartH - (80 / 100) * chartH;
+  ctx.strokeStyle = passColor;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(PAD.left, passY); ctx.lineTo(PAD.left + chartW, passY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = passColor;
+  ctx.font = 'bold 9px Nunito, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('CSE 80%', PAD.left + 4, passY - 3);
+
+  if (!items.length) {
+    ctx.fillStyle = labelColor;
+    ctx.textAlign = 'center';
+    ctx.font = '12px Nunito, sans-serif';
+    ctx.fillText('Take a quiz to see your trend', PAD.left + chartW / 2, PAD.top + chartH / 2 + 4);
+    return;
+  }
+
+  // Compute x positions
+  const pts = items.map((a, i) => {
+    const pct = a.total_questions > 0 ? (a.score / a.total_questions) * 100 : 0;
+    const x = items.length === 1
+      ? PAD.left + chartW / 2
+      : PAD.left + (i / (items.length - 1)) * chartW;
+    const y = PAD.top + chartH - (Math.min(pct, 100) / 100) * chartH;
+    return { x, y, pct };
+  });
+
+  // Fill gradient under line
+  const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + chartH);
+  grad.addColorStop(0, isDark ? 'rgba(74,143,239,0.25)' : 'rgba(43,74,203,0.15)');
+  grad.addColorStop(1, isDark ? 'rgba(74,143,239,0)' : 'rgba(43,74,203,0)');
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length - 1].x, PAD.top + chartH);
+  ctx.lineTo(pts[0].x, PAD.top + chartH);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Score line
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+
+  // Dots
+  pts.forEach(p => {
+    const dotColor = p.pct >= 80 ? passColor : (isDark ? '#f87171' : '#DC2626');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = dotColor;
+    ctx.fill();
+    ctx.strokeStyle = dotStroke;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // X-axis labels: first and last date
+  if (items.length >= 2) {
+    const fmt = d => parseAttemptedAt(d).toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric' });
+    ctx.fillStyle = labelColor;
+    ctx.font = '9px Nunito, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(fmt(items[0].attempted_at), PAD.left, H - 4);
+    ctx.textAlign = 'right';
+    ctx.fillText(fmt(items[items.length - 1].attempted_at), PAD.left + chartW, H - 4);
+  }
+
+  // Legend
+  const legend = document.getElementById('score-chart-legend');
+  if (legend) {
+    legend.innerHTML = `
+      <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:${labelColor}">
+        <span style="width:10px;height:10px;border-radius:50%;background:${lineColor};display:inline-block;"></span>Quiz Score
+      </span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:${passColor}">
+        <span style="width:14px;height:2px;border-top:2px dashed ${passColor};display:inline-block;"></span>CSE Pass Line
+      </span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:${isDark ? '#f87171' : '#DC2626'}">
+        <span style="width:10px;height:10px;border-radius:50%;background:${isDark ? '#f87171' : '#DC2626'};display:inline-block;"></span>Below Pass
+      </span>`;
+  }
+}
+
 function renderQuizHistory() {
   const list = document.getElementById('quiz-history-list');
   if (!list) return;
 
-  let items = [..._attemptHistoryCache];
+  // Mock tests have their own dedicated tab — exclude them from home history
+  let items = _attemptHistoryCache.filter(a => a.exam_type !== 'mock-test');
   if (!items.length) {
     list.innerHTML = '<div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">No quizzes yet. Start one!</div>';
     return;
@@ -2571,15 +3049,13 @@ function renderQuizHistory() {
 
   // Sort
   if (_historySortField === 'date') {
-    items.sort((a, b) => new Date(b.attempted_at) - new Date(a.attempted_at));
+    items.sort((a, b) => parseAttemptedAt(b.attempted_at) - parseAttemptedAt(a.attempted_at));
   } else if (_historySortField === 'score') {
     items.sort((a, b) => {
       const pctA = a.total_questions > 0 ? a.score / a.total_questions : 0;
       const pctB = b.total_questions > 0 ? b.score / b.total_questions : 0;
       return pctB - pctA;
     });
-  } else if (_historySortField === 'subject') {
-    items.sort((a, b) => (a.exam_type || '').localeCompare(b.exam_type || ''));
   }
   if (_historySortAsc) items.reverse();
 
@@ -2590,7 +3066,7 @@ function renderQuizHistory() {
     const name = getTopicDisplayName(h.exam_type) || h.exam_type || 'Quiz';
     const subj = getTopicSubject(h.exam_type);
     const icon = getSubjectIcon(h.exam_type);
-    const d = h.attempted_at ? new Date(h.attempted_at) : null;
+    const d = parseAttemptedAt(h.attempted_at);
     const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
     const enc = encodeURIComponent;
@@ -2670,26 +3146,42 @@ async function initApp() {
   if (!_sb) return;
   try {
     const { data: { session } } = await _sb.auth.getSession();
+    if (!session?.user) {
+      window.location.replace('index.html');
+      return;
+    }
     if (session?.user) {
       currentUser = session.user;
+      const uid = session.user.id;
+
+      // Detect user switch — clear all user-specific local data if different user
+      const lastUid = localStorage.getItem('cse_last_user_id');
+      if (lastUid && lastUid !== uid) {
+        localStorage.removeItem('cse_stats');
+        localStorage.removeItem('cse_quiz_scores');
+      }
+      localStorage.setItem('cse_last_user_id', uid);
+
       const name = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Reviewer';
       document.getElementById('home-name').textContent = name;
       renderProfile();
+      loadUserAvatar(); // load avatar photo from Supabase storage (non-blocking)
       _attemptHistoryCache = await loadQuizHistory();
-      // Sync studied dates from Supabase attempt history
-      if (_attemptHistoryCache.length) {
-        const stats = getStats();
-        const dbDates = _attemptHistoryCache.map(a => {
-          const d = new Date(a.attempted_at);
-          return getLocalDateStr(d);
-        });
-        dbDates.forEach(d => { if (!stats.studiedDates.includes(d)) stats.studiedDates.push(d); });
-        saveStats(stats);
-      }
-      // Load topics and attempt counts from DB, then refresh home + history
+      // Sync studied dates from Supabase attempt history — always REPLACE so streak
+      // reflects only THIS user's actual activity, not any previous user's local data.
+      const stats = getStats();
+      const dbDates = _attemptHistoryCache.map(a =>
+        getLocalDateStr(parseAttemptedAt(a.attempted_at))
+      );
+      // Deduplicate and replace (DB is source of truth for logged-in users)
+      stats.studiedDates = [...new Set(dbDates)];
+      saveStats(stats);
+      // Load topics, attempt counts, and answered questions for Cards tab
       await Promise.all([loadAllSubjectTopics(), loadTopicAttemptCounts()]);
+      await loadAnsweredQuestions();
       renderHome();
       renderQuizHistory();
+      renderMockScreen();
     }
     _sb.auth.onAuthStateChange((_ev, sess) => {
       if (sess?.user) {
@@ -2710,17 +3202,37 @@ async function initApp() {
 initApp();
 
 // ═══════════════════════════════════════════════════════════════
+// MOBILE: COLLAPSING HOME HEADER ON SCROLL
+// ═══════════════════════════════════════════════════════════════
+(function initHomeScrollCollapse() {
+  const homeScreen = document.getElementById('screen-home');
+  if (!homeScreen) return;
+  const scrollArea = homeScreen.querySelector('.scroll-area');
+  const header = document.getElementById('home-header');
+  if (!scrollArea || !header) return;
+  scrollArea.addEventListener('scroll', () => {
+    if (scrollArea.scrollTop > 80) {
+      header.classList.add('header-collapsed');
+    } else {
+      header.classList.remove('header-collapsed');
+    }
+  }, { passive: true });
+})();
+
+// ═══════════════════════════════════════════════════════════════
 // EXPOSE TO HTML onclick
 // ═══════════════════════════════════════════════════════════════
 Object.assign(window, {
   goTo, goToRecommendation,
   toggleMapSubject, expandMapSubject, collapseMapSubject,
-  startSubjectQuiz, startQuizForTopic, startRandomQuiz, handleMiniCSE, startMockTest,
+  toggleQuizSubject,
+  startSubjectQuiz, startQuizForTopic, startQuizForDBTopic, startRandomQuiz, handleMiniCSE, startMockTest,
   selectAnswer, quizNext, retryQuiz, generateNewQuiz, exitQuizResult, confirmExitQuiz, toggleBookmark,
-  jumpToQuestion, sortHistory,
+  jumpToQuestion, sortHistory, renderScoreChart,
   loadFlashcards, flipCard, nextCard, prevCard,
   setBmFilter, removeBookmark,
   showPremiumModal, showAbout, toggleDarkMode, toggleExamType, confirmLogout,
   hideModal, showModal,
   openAttemptDetail, goBack, startQuizForDBTopic, refreshUserData,
+  triggerAvatarUpload, handleAvatarFileSelect,
 });

@@ -2,412 +2,860 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <meta name="theme-color" content="#3B5BDB" />
-  <link rel="manifest" href="/manifest.json" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CSE Pro — Sign In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lilita+One&display=swap"
+    rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <title>CSE Pro Reviewer</title>
+  <style>
+    :root {
+      --green: #22C55E;
+      --green-dk: #16A34A;
+      --green-lt: #DCFCE7;
+      --blue: #38BDF8;
+      --blue-dk: #0284C7;
+      --blue-lt: #E0F2FE;
+      --red: #F87171;
+      --red-dk: #DC2626;
+      --red-lt: #FEE2E2;
+      --ink: #1C2B2B;
+      --ink-mid: #4B6060;
+      --ink-lt: #8AA0A0;
+      --surface: #fff;
+      --page: #F0FAFB;
+      --border: #D1EAE8;
+      --r-xl: 22px;
+      --r-lg: 16px;
+      --r-md: 12px;
+      --r-pill: 999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--page);
+      font-family: 'Nunito', sans-serif;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* ── Animated background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, .12) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(56, 189, 248, .10) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--r-xl);
+      padding: 32px 28px;
+      border: 2.5px solid var(--border);
+      box-shadow: 0 8px 0 var(--border), 0 20px 60px rgba(0, 0, 0, .08);
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      z-index: 1;
+      animation: pop-in .4s cubic-bezier(.34, 1.56, .64, 1) both;
+    }
+
+    @keyframes pop-in {
+      from {
+        transform: scale(.85);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-6px);
+      }
+    }
+
+    @keyframes slide-up {
+      from {
+        transform: translateY(12px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      20%,
+      60% {
+        transform: translateX(-6px);
+      }
+
+      40%,
+      80% {
+        transform: translateX(6px);
+      }
+    }
+
+    /* ── Logo ── */
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--green), var(--green-dk));
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      box-shadow: 0 6px 0 var(--green-dk), 0 10px 30px rgba(34, 197, 94, .3);
+      margin-bottom: 10px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .logo-title {
+      font-family: 'Lilita One', cursive;
+      font-size: 26px;
+      color: var(--ink);
+    }
+
+    .logo-title span {
+      color: var(--green);
+    }
+
+    .logo-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-lt);
+      margin-top: 2px;
+    }
+
+    /* ── Tabs ── */
+    .auth-tabs {
+      display: flex;
+      background: var(--page);
+      border-radius: var(--r-pill);
+      padding: 3px;
+      margin-bottom: 24px;
+      border: 2px solid var(--border);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 9px;
+      border-radius: var(--r-pill);
+      font-size: 13px;
+      font-weight: 900;
+      text-align: center;
+      cursor: pointer;
+      color: var(--ink-lt);
+      transition: all .2s;
+      border: none;
+      background: transparent;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .auth-tab.active {
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    }
+
+    /* ── Form panels ── */
+    .auth-panel {
+      display: none;
+      animation: slide-up .25s ease both;
+    }
+
+    .auth-panel.active {
+      display: block;
+    }
+
+    /* ── Inputs ── */
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--ink-lt);
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: var(--r-md);
+      border: 2.5px solid var(--border);
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+      background: var(--page);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .field input:focus {
+      border-color: var(--green);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, .12);
+    }
+
+    .field input.error {
+      border-color: var(--red);
+      animation: shake .35s ease;
+    }
+
+    .field select {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: var(--r-md);
+      border: 2.5px solid var(--border);
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+      background: var(--page);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238AA0A0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+    }
+
+    .field select:focus {
+      border-color: var(--green);
+      background-color: var(--surface);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, .12);
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      padding: 15px;
+      border-radius: var(--r-pill);
+      background: var(--green);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px;
+      font-weight: 900;
+      border: none;
+      box-shadow: 0 5px 0 var(--green-dk);
+      cursor: pointer;
+      transition: transform .1s, box-shadow .1s;
+      margin-top: 4px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 7px 0 var(--green-dk);
+    }
+
+    .btn-primary:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 var(--green-dk);
+    }
+
+    .btn-primary:disabled {
+      opacity: .6;
+      cursor: default;
+      transform: none;
+      box-shadow: 0 5px 0 var(--green-dk);
+    }
+
+    .btn-google {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--r-pill);
+      background: var(--surface);
+      color: var(--ink);
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      border: 2.5px solid var(--border);
+      box-shadow: 0 4px 0 var(--border);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform .1s, box-shadow .1s;
+      margin-top: 10px;
+    }
+
+    .btn-google:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 var(--border);
+    }
+
+    .btn-google:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .google-icon {
+      font-size: 18px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0;
+      color: var(--ink-lt);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* ── Message boxes ── */
+    .msg {
+      padding: 12px 14px;
+      border-radius: var(--r-md);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      border: 2px solid;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .msg.show {
+      display: block;
+    }
+
+    .msg.error {
+      background: var(--red-lt);
+      border-color: #FDA4AF;
+      color: var(--red-dk);
+    }
+
+    .msg.success {
+      background: var(--green-lt);
+      border-color: #86EFAC;
+      color: var(--green-dk);
+    }
+
+    .msg.info {
+      background: var(--blue-lt);
+      border-color: var(--blue);
+      color: var(--blue-dk);
+    }
+
+    /* ── Password toggle ── */
+    .field-pw {
+      position: relative;
+    }
+
+    .pw-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--ink-lt);
+      user-select: none;
+    }
+
+    /* ── Forgot + Terms ── */
+    .link-row {
+      text-align: right;
+      margin-top: -6px;
+      margin-bottom: 14px;
+    }
+
+    .text-link {
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--blue-dk);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      background: none;
+      border: none;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .terms {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink-lt);
+      text-align: center;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    .terms a {
+      color: var(--blue-dk);
+      text-decoration: none;
+      font-weight: 900;
+    }
+
+    /* ── Password strength ── */
+    .pw-strength {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .pw-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--border);
+      transition: background .3s;
+    }
+
+    .pw-bar.weak {
+      background: var(--red);
+    }
+
+    .pw-bar.medium {
+      background: var(--yellow, #FACC15);
+    }
+
+    .pw-bar.strong {
+      background: var(--green);
+    }
+
+    .pw-label {
+      font-size: 10px;
+      font-weight: 900;
+      color: var(--ink-lt);
+      margin-top: 3px;
+    }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2.5px solid rgba(255, 255, 255, .4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-lt);
+    }
+
+    .back-link a {
+      color: var(--green-dk);
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    /* ── Reset panel ── */
+    #panel-reset .reset-icon {
+      text-align: center;
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    #panel-reset h2 {
+      font-family: 'Lilita One', cursive;
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    #panel-reset p {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-lt);
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="app-root">
 
-    <div id="screen-home" class="screen">
-      <div class="home-header">
-        <div class="home-header-top">
-          <div class="home-header-text">
-            <div class="home-greeting">Good day,</div>
-            <div class="home-name" id="home-name">Reviewer</div>
-            <div class="home-date" id="home-date"></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <button class="refresh-btn" id="refresh-btn" onclick="refreshUserData()" title="Refresh data">↻</button>
-            <img src="/logo.png" alt="CSE Pro" class="home-logo" />
-          </div>
-        </div>
-        <div class="streak-card">
-          <div class="streak-top-row">
-            <div class="streak-left">
-              <div class="streak-flame">🔥</div>
-              <div>
-                <div style="display:flex;align-items:baseline;gap:6px;">
-                  <div class="streak-count" id="streak-count">0</div>
-                  <div class="streak-label">day streak</div>
-                </div>
-                <div class="streak-best" id="streak-best">Start today! 💪</div>
-              </div>
-            </div>
-            <div class="streak-badge" id="streak-badge">🌱 Beginner</div>
-          </div>
-          <div class="streak-week-row" id="streak-week-row"></div>
+  <div class="card">
+
+    <!-- Logo -->
+    <div class="logo-wrap">
+      <div class="logo-icon">🎓</div>
+      <div class="logo-title">CSE <span>Pro</span></div>
+      <div class="logo-sub">Philippine Civil Service Exam Reviewer</div>
+    </div>
+
+    <!-- Global message box -->
+    <div class="msg" id="global-msg"></div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs" id="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <!-- ── SIGN IN PANEL ── -->
+    <div class="auth-panel active" id="panel-login">
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="field-pw">
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+          <span class="pw-toggle" onclick="togglePw('login-password', this)">👁</span>
         </div>
       </div>
-      <div class="scroll-area">
-        <div class="section-title">📊 Recent Quizzes</div>
-        <div class="history-sort-row">
-          <button class="history-sort-btn active" id="sort-date-btn" onclick="sortHistory('date')">🕐 Date</button>
-          <button class="history-sort-btn" id="sort-score-btn" onclick="sortHistory('score')">📈 Score</button>
-          <button class="history-sort-btn" id="sort-subject-btn" onclick="sortHistory('subject')">📚 Subject</button>
+      <div class="link-row">
+        <button class="text-link" onclick="switchTab('reset')">Forgot password?</button>
+      </div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In →</button>
+
+      <div class="divider">or continue with</div>
+      <button class="btn-google" onclick="doGoogleAuth()">
+        <span class="google-icon">🔵</span>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- ── SIGN UP PANEL ── -->
+    <div class="auth-panel" id="panel-signup">
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="signup-name" placeholder="Juan dela Cruz" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="field-pw">
+          <input type="password" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password"
+            oninput="checkStrength(this.value)">
+          <span class="pw-toggle" onclick="togglePw('signup-password', this)">👁</span>
         </div>
-        <div id="quiz-history-list">
-          <div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">Loading history…</div>
+        <div class="pw-strength">
+          <div class="pw-bar" id="s-bar-1"></div>
+          <div class="pw-bar" id="s-bar-2"></div>
+          <div class="pw-bar" id="s-bar-3"></div>
+          <div class="pw-bar" id="s-bar-4"></div>
         </div>
-        <div class="section-title">💡 Recommended for You</div>
-        <div class="rec-card" id="rec-card" onclick="goToRecommendation()">
-          <div class="rec-label" id="rec-label">Study Recommendation</div>
-          <div class="rec-topic" id="rec-topic">Loading…</div>
-          <div class="rec-why" id="rec-why">Calculating your weakest area…</div>
-          <div class="rec-cta">Start Quiz Now →</div>
-        </div>
-        <div class="section-title">🗺️ Study Map</div>
-        <div class="study-map-card">
-          <div class="study-map-title">Your Preparedness</div>
-          <div class="study-map-sub">Tap any topic to practice it now</div>
-          <div id="study-map-body">
-            <div style="color:var(--ink-lt);font-size:13px;padding:12px 0;">Loading…</div>
-          </div>
-        </div>
+        <div class="pw-label" id="pw-label"></div>
+      </div>
+      <div class="field">
+        <label>Exam Type</label>
+        <select id="signup-exam-type">
+          <option value="subpro" selected>SubProfessional</option>
+          <option value="professional">Professional</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="signup-btn" onclick="doSignUp()">Create Account →</button>
+
+      <div class="divider">or continue with</div>
+      <button class="btn-google" onclick="doGoogleAuth()">
+        <span class="google-icon">🔵</span>
+        Continue with Google
+      </button>
+
+      <div class="terms">
+        By signing up, you agree to our <a href="#">Terms of Service</a>
+        and <a href="#">Privacy Policy</a>.
       </div>
     </div>
 
-    <div id="screen-quiz-home" class="screen">
-      <div class="quiz-home-header">
-        <div class="quiz-home-title">Daily Quiz</div>
-        <div class="quiz-home-sub">Choose a subject or challenge yourself</div>
+    <!-- ── PASSWORD RESET PANEL ── -->
+    <div class="auth-panel" id="panel-reset">
+      <div class="reset-icon">🔑</div>
+      <h2>Reset Password</h2>
+      <p>Enter your email and we'll send you a reset link.</p>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="reset-email" placeholder="you@example.com">
       </div>
-      <div class="scroll-area">
-        <div class="section-title">⚡ Quick Practice</div>
-        <div class="quick-option-row">
-          <div class="quick-opt-card" onclick="startRandomQuiz()">
-            <div style="font-size:28px;">🎲</div>
-            <div class="quick-opt-label">Random Mix</div>
-            <div class="quick-opt-sub">10 random questions from all subjects</div>
-          </div>
-        </div>
-        <div class="section-title">🗺️ Study Map — Tap a Topic to Quiz</div>
-        <div class="study-map-card">
-          <div id="study-map-body-quiz">
-            <div style="color:var(--ink-lt);font-size:13px;padding:12px 0;">Loading…</div>
-          </div>
-        </div>
-        <div class="mini-cse-card" id="mini-cse-card" onclick="handleMiniCSE()">
-          <div class="mini-cse-inner">
-            <div style="font-size:36px;flex-shrink:0;">🎯</div>
-            <div style="flex:1;">
-              <div class="mini-cse-title">Mini Civil Service Exam</div>
-              <div class="mini-cse-desc">45 questions across all subjects — just like the real thing</div>
-              <div class="mini-cse-badge" id="mini-cse-badge">🔓 Ready! Tap to start</div>
-            </div>
-          </div>
-        </div>
-        <div class="mock-test-card" id="mock-test-card" onclick="startMockTest()">
-          <div class="mini-cse-inner">
-            <div style="font-size:36px;flex-shrink:0;">📋</div>
-            <div style="flex:1;">
-              <div class="mini-cse-title">Mock Test</div>
-              <div class="mini-cse-desc" id="mock-test-desc">Full-length timed exam simulation</div>
-              <div class="mini-cse-badge" id="mock-test-badge"
-                style="background:var(--green-lt);color:var(--green-dk);border-color:var(--green);">📋 Tap to start
-              </div>
-            </div>
-          </div>
-        </div>
+      <button class="btn-primary" id="reset-btn" onclick="doReset()">Send Reset Link</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="text-link" onclick="switchTab('login')">← Back to Sign In</button>
       </div>
     </div>
 
-    <div id="screen-quiz-q" class="screen">
-      <div class="quiz-topbar">
-        <button class="quiz-exit-btn" onclick="confirmExitQuiz()">✕</button>
-        <div class="quiz-progress-wrap">
-          <div class="quiz-progress-label" id="q-progress-label">Question 1 of 10</div>
-          <div class="quiz-timer" id="quiz-timer" style="display:none;">⏱ --:--</div>
-          <div class="quiz-prog-bar">
-            <div class="quiz-prog-fill" id="q-prog-fill" style="width:10%"></div>
-          </div>
-        </div>
-        <button class="quiz-bookmark-btn" id="bm-btn" onclick="toggleBookmark()">☆</button>
-      </div>
-      <div class="quiz-nav-strip" id="quiz-nav-strip" style="display:none;"></div>
-      <div class="quiz-q-scroll" id="quiz-q-scroll">
-        <div class="quiz-subject-tag" id="q-subject-tag"></div>
-        <div class="quiz-question-text" id="q-text"></div>
-        <div class="quiz-choices" id="q-choices"></div>
-        <div class="quiz-explanation" id="q-explanation">
-          <div class="expl-label">Explanation</div>
-          <div class="expl-text" id="q-expl-text"></div>
-        </div>
-      </div>
-      <div class="quiz-next-bar" id="quiz-next-bar">
-        <button class="quiz-next-btn" id="quiz-next-btn" onclick="quizNext()">Next →</button>
-      </div>
+    <!-- Back to app -->
+    <div class="back-link">
+      <a id="back-link" href="#">← Back to Reviewer</a>
     </div>
-
-    <div id="screen-quiz-result" class="screen">
-      <div class="result-hero">
-        <div class="result-emoji" id="res-emoji">⭐</div>
-        <div class="result-score" id="res-score">0%</div>
-        <div class="result-label" id="res-label">0 of 0 correct</div>
-        <div class="result-message" id="res-message">Great job!</div>
-      </div>
-      <div class="result-stat-row">
-        <div class="result-stat">
-          <div class="result-stat-num" id="res-correct">0</div>
-          <div class="result-stat-lbl">Correct</div>
-        </div>
-        <div class="result-stat">
-          <div class="result-stat-num" id="res-wrong">0</div>
-          <div class="result-stat-lbl">Wrong</div>
-        </div>
-        <div class="result-stat">
-          <div class="result-stat-num" id="res-time">0s</div>
-          <div class="result-stat-lbl">Time</div>
-        </div>
-      </div>
-      <div class="result-actions">
-        <button class="btn btn-outline btn-sm" style="flex:1" onclick="exitQuizResult()">Done</button>
-        <button class="btn btn-green" style="flex:1" onclick="retryQuiz()">Retake 🔄</button>
-        <button class="btn btn-green" style="flex:1;background:var(--blue);box-shadow:0 5px 0 var(--blue-dk);"
-          onclick="generateNewQuiz()">New Quiz ✨</button>
-      </div>
-      <div class="scroll-area" id="res-review"></div>
-    </div>
-
-    <div id="screen-cards" class="screen">
-      <div class="cards-header">
-        <div class="cards-title">Flash Cards</div>
-        <div class="cards-subtitle">Tap a card to reveal the answer</div>
-      </div>
-      <div class="cards-filter-wrap" id="cards-filter"></div>
-      <div class="flashcard-area" id="flashcard-area">
-        <div class="fc-empty">
-          <div class="fc-empty-icon">🃏</div>
-          <div class="fc-empty-title">Pick a subject above</div>
-          <div class="fc-empty-sub">Tap any subject chip to begin reviewing</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="screen-bookmarks" class="screen">
-      <div class="screen-header">
-        <div class="screen-header-title">⭐ Saved Questions</div>
-        <div class="screen-header-sub" id="bm-count">0 saved</div>
-      </div>
-      <div class="bm-filter" id="bm-filter"></div>
-      <div class="scroll-area" id="bm-list"></div>
-    </div>
-
-    <div id="screen-profile" class="screen">
-      <div class="profile-hero">
-        <div class="profile-avatar" id="prof-avatar">👤</div>
-        <div class="profile-name" id="prof-name">Reviewer</div>
-        <div class="profile-email" id="prof-email"></div>
-        <div class="profile-since" id="prof-since"></div>
-      </div>
-      <div class="scroll-area">
-        <div class="profile-stats-grid" id="profile-stats"></div>
-        <div class="premium-banner" onclick="showPremiumModal()">
-          <div class="premium-icon">⭐</div>
-          <div style="flex:1;">
-            <div class="premium-banner-title">Upgrade to Premium</div>
-            <div class="premium-banner-sub">Unlock all subjects, unlimited quizzes &amp; more</div>
-          </div>
-          <div class="premium-arrow">›</div>
-        </div>
-        <div class="section-title">📈 Subject Progress</div>
-        <div id="profile-progress-overview"></div>
-        <div class="section-title">⚙️ Settings</div>
-        <div class="settings-card">
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Exam Type</div>
-              <div class="setting-sub" id="exam-type-label">SubProfessional</div>
-            </div>
-            <div class="toggle-sw" id="exam-type-toggle" onclick="toggleExamType()"></div>
-          </div>
-          <div class="setting-divider"></div>
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Dark Mode</div>
-              <div class="setting-sub">Easier on the eyes at night</div>
-            </div>
-            <div class="toggle-sw" id="dark-toggle" onclick="toggleDarkMode()"></div>
-          </div>
-          <div class="setting-divider"></div>
-          <div class="setting-row" onclick="showAbout()" style="cursor:pointer;">
-            <div>
-              <div class="setting-label">About CSE Pro</div>
-              <div class="setting-sub">Version 5.0 · Built for passers</div>
-            </div>
-            <div class="setting-icon">›</div>
-          </div>
-        </div>
-        <button class="logout-btn" onclick="confirmLogout()">🚪 Sign Out</button>
-      </div>
-    </div>
-
-    <div id="screen-attempt-detail" class="screen">
-      <div class="screen-header">
-        <button class="back-btn-plain" onclick="goBack()">‹ Back</button>
-        <div>
-          <div class="screen-header-title" id="detail-title">Quiz Review</div>
-          <div class="screen-header-sub" id="detail-meta"></div>
-        </div>
-      </div>
-      <div class="scroll-area" id="detail-list">
-        <div style="text-align:center;color:var(--ink-lt);padding:40px 20px;">Loading…</div>
-      </div>
-    </div>
-
-    <div id="screen-about" class="screen">
-      <div class="about-hero">
-        <img src="/logo.png" alt="CSE Pro" class="about-logo" />
-        <div class="about-hero-title">CSE Pro Reviewer</div>
-        <div class="about-hero-sub">Your smartest path to civil service eligibility</div>
-        <div class="about-hero-chips">
-          <span class="about-chip">📋 Sub-Professional</span>
-          <span class="about-chip">🎓 Professional</span>
-        </div>
-      </div>
-      <div class="scroll-area">
-
-        <div class="section-title">📌 What is the CSE?</div>
-        <div class="about-card">
-          <div class="about-card-body">
-            The <strong>Civil Service Examination (CSE)</strong> is the Philippines' mandatory gateway to permanent government employment, administered by the Civil Service Commission (CSC). Passing it gives you <em>civil service eligibility</em> — the #1 legal requirement for any plantilla position.
-          </div>
-          <div class="about-alert">
-            ⚠️ Over <strong>80–85%</strong> of all test-takers fail every cycle. The national passing rate has hovered between <strong>9–18%</strong> for the past decade. Structured, focused review is what separates passers from the rest.
-          </div>
-        </div>
-
-        <div class="section-title">⚖️ Two Exam Levels</div>
-        <div class="about-level-row">
-          <div class="about-level-card subpro">
-            <div class="about-level-badge">Sub-Professional</div>
-            <div class="about-level-icon">📋</div>
-            <div class="about-level-items">
-              <div class="about-level-item">🕐 2 hrs 40 min</div>
-              <div class="about-level-item">📝 165 items</div>
-              <div class="about-level-item">🎓 HS grad / 2 yrs college</div>
-              <div class="about-level-item">💼 1st-level gov't positions</div>
-              <div class="about-level-item">📁 Includes Clerical Ability</div>
-            </div>
-          </div>
-          <div class="about-level-card pro">
-            <div class="about-level-badge">Professional</div>
-            <div class="about-level-icon">🎓</div>
-            <div class="about-level-items">
-              <div class="about-level-item">🕐 3 hrs 10 min</div>
-              <div class="about-level-item">📝 170 items</div>
-              <div class="about-level-item">🎓 4-year degree</div>
-              <div class="about-level-item">💼 1st &amp; 2nd-level positions</div>
-              <div class="about-level-item">🧠 Logic &amp; Analogy included</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-title">📚 Subjects Covered</div>
-        <div class="about-subjects-grid">
-          <div class="about-subj-pill verbal">📝 Verbal Ability<div class="about-subj-sub">Grammar · Vocab · Reading</div></div>
-          <div class="about-subj-pill numerical">🔢 Numerical Ability<div class="about-subj-sub">Arithmetic · Word Problems</div></div>
-          <div class="about-subj-pill analytical">🧩 Analytical Ability<div class="about-subj-sub">Logic · Word Associations</div></div>
-          <div class="about-subj-pill clerical">📋 Clerical Ability<div class="about-subj-sub">Sub-Pro level only</div></div>
-          <div class="about-subj-pill geninfo">🏛️ General Information<div class="about-subj-sub">Constitution · RA 6713 · Env.</div></div>
-        </div>
-
-        <div class="about-pass-banner">
-          <div class="about-pass-num">80%</div>
-          <div class="about-pass-text">
-            <div class="about-pass-title">Passing Score Required</div>
-            <div class="about-pass-sub">The CSC mandates a strict 80% general rating. No rounding, no curving — 79.99% is a definitive fail.</div>
-          </div>
-        </div>
-
-        <div class="section-title">🚀 How CSE Pro Helps You</div>
-        <div class="about-features-list">
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--blue-lt);">📝</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Topic-Focused Quizzes</div>
-              <div class="about-feature-sub">5-question drills per topic so you build mastery fast. Pinpoint weak spots without wasting time.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--green-lt);">🎯</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Mini CSE &amp; Mock Tests</div>
-              <div class="about-feature-sub">Simulate the real exam — a 45-item Mini CSE and a full timed Mock Test with authentic question distribution.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--gold-lt);">💡</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Smart Daily Recommendation</div>
-              <div class="about-feature-sub">The app tells you exactly what to study today — rotating through all subjects all week so nothing gets left behind.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--purple-lt);">📊</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Full Progress Tracking</div>
-              <div class="about-feature-sub">Study Map shows your readiness per subject. Every attempt is saved — review your wrong answers with explanations.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--orange-lt);">🃏</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Flash Cards</div>
-              <div class="about-feature-sub">Quick-flip cards for key terms, laws, and definitions. Perfect for commute reviews.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--red-lt);">🔥</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Streak &amp; Motivation</div>
-              <div class="about-feature-sub">Daily streaks and badges keep you accountable. Consistency is the single biggest predictor of passing.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="about-cta-card">
-          <div class="about-cta-emoji">🏆</div>
-          <div class="about-cta-title">You Can Pass This Exam</div>
-          <div class="about-cta-body">Most people fail because they don't know what to focus on or they don't practice consistently. CSE Pro is built around exactly what the exam tests. Start with one topic today. Be consistent. You've got this, future government employee! 🇵🇭</div>
-          <button class="about-cta-btn" onclick="goTo('home')">Start Reviewing Now →</button>
-        </div>
-
-        <div class="about-version">CSE Pro · Version 5.0 · Built for passers 🇵🇭</div>
-      </div>
-    </div>
-
-    <nav id="bottom-nav">
-      <button class="nav-item" id="nav-about" onclick="goTo('about')"><span class="nav-icon">📖</span>About</button>
-      <button class="nav-item" id="nav-home" onclick="goTo('home')"><span class="nav-icon">🏠</span>Home</button>
-      <button class="nav-item" id="nav-quiz-home" onclick="goTo('quiz-home')"><span
-          class="nav-icon">📝</span>Quiz</button>
-      <button class="nav-item" id="nav-cards" onclick="goTo('cards')"><span class="nav-icon">🃏</span>Cards</button>
-      <button class="nav-item" id="nav-bookmarks" onclick="goTo('bookmarks')"><span
-          class="nav-icon">⭐</span>Saved</button>
-      <button class="nav-item" id="nav-profile" onclick="goTo('profile')"><span
-          class="nav-icon">👤</span>Profile</button>
-    </nav>
-
-    <div id="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text" id="loading-text">Loading…</div>
-    </div>
-    <div id="modal-overlay" onclick="hideModal()">
-      <div id="modal-box" onclick="event.stopPropagation()">
-        <div class="modal-title" id="modal-title"></div>
-        <div class="modal-body" id="modal-body"></div>
-        <div class="modal-actions" id="modal-actions"></div>
-      </div>
-    </div>
-    <div id="toast"></div>
   </div>
-  <script type="module" src="/src/main.js"></script>
+
+  <script>
+    // ── Supabase init ──────────────────────────────────────────────
+    const SUPABASE_URL = 'https://jlicpqvlmwjhsvqxiktn.supabase.co';
+    const SUPABASE_ANON = 'sb_publishable_itlfyz8mYoMnMDtXUJVyUg_gDFhTlpl';
+    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // ── ✏️  CHANGE THIS to your reviewer's filename ──────────────────
+    const APP_FILE = 'home.html';
+    // ─────────────────────────────────────────────────────────────────
+
+    // Set back-link href
+    document.getElementById('back-link').href = APP_FILE;
+
+    // Helper: get redirect target — respects ?next= URL param
+    function getRedirectURL() {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get('next');
+      return next ? decodeURIComponent(next) : APP_FILE;
+    }
+
+    // ── Check if already logged in → redirect immediately ──────────
+    (async () => {
+      const { data: { session } } = await _sb.auth.getSession();
+      if (session?.user) {
+        window.location.replace(getRedirectURL());
+      }
+    })();
+
+    // ── Tab switching ──────────────────────────────────────────────
+    function switchTab(tab) {
+      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('panel-' + tab).classList.add('active');
+      const tabEl = document.querySelector(`.auth-tab[onclick="switchTab('${tab}')"]`);
+      if (tabEl) tabEl.classList.add('active');
+      const authTabs = document.getElementById('auth-tabs');
+      authTabs.style.display = tab === 'reset' ? 'none' : 'flex';
+      clearMsg('global-msg');
+    }
+
+    // ── Message helpers ────────────────────────────────────────────
+    function showMsg(id, text, type = 'error') {
+      const el = document.getElementById(id);
+      el.innerHTML = text;
+      el.className = `msg ${type} show`;
+    }
+    function clearMsg(id) {
+      const el = document.getElementById(id);
+      el.className = 'msg';
+      el.textContent = '';
+    }
+
+    function setLoading(btnId, loading, defaultText) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = loading;
+      btn.innerHTML = loading
+        ? `<span class="spinner"></span> Please wait…`
+        : defaultText;
+    }
+
+    // ── Input shake ───────────────────────────────────────────────
+    function shakeInput(id) {
+      const el = document.getElementById(id);
+      el.classList.add('error');
+      setTimeout(() => el.classList.remove('error'), 600);
+    }
+
+    // ── Password visibility toggle ────────────────────────────────
+    function togglePw(inputId, icon) {
+      const input = document.getElementById(inputId);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      icon.textContent = isHidden ? '🙈' : '👁';
+    }
+
+    // ── Password strength ─────────────────────────────────────────
+    function checkStrength(val) {
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+
+      const bars = [1, 2, 3, 4].map(i => document.getElementById('s-bar-' + i));
+      const label = document.getElementById('pw-label');
+      const colors = { 0: '', 1: 'weak', 2: 'weak', 3: 'medium', 4: 'strong' };
+      const labels = { 0: '', 1: 'Weak', 2: 'Weak', 3: 'Good', 4: 'Strong 💪' };
+      const lColor = { 0: '', 1: 'var(--red-dk)', 2: 'var(--red-dk)', 3: 'var(--yellow-dk,#CA8A04)', 4: 'var(--green-dk)' };
+
+      bars.forEach((b, i) => {
+        b.className = 'pw-bar ' + (i < score ? colors[score] : '');
+      });
+      label.textContent = val.length ? labels[score] : '';
+      label.style.color = lColor[score];
+    }
+
+    // ── SIGN IN ───────────────────────────────────────────────────
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const pw = document.getElementById('login-password').value;
+
+      if (!email) { shakeInput('login-email'); showMsg('global-msg', 'Please enter your email address.'); return; }
+      if (!pw) { shakeInput('login-password'); showMsg('global-msg', 'Please enter your password.'); return; }
+
+      setLoading('login-btn', true, 'Sign In →');
+      clearMsg('global-msg');
+
+      const { error } = await _sb.auth.signInWithPassword({ email, password: pw });
+
+      if (error) {
+        setLoading('login-btn', false, 'Sign In →');
+        const msg = error.message.includes('Invalid') || error.message.includes('credentials')
+          ? '❌ Incorrect email or password. Please try again.'
+          : `❌ ${error.message}`;
+        showMsg('global-msg', msg, 'error');
+        shakeInput('login-email');
+        shakeInput('login-password');
+      } else {
+        showMsg('global-msg', '✓ Signed in! Redirecting you now…', 'success');
+        setTimeout(() => window.location.href = getRedirectURL(), 1200);
+      }
+    }
+
+    // ── SIGN UP ───────────────────────────────────────────────────
+    async function doSignUp() {
+      const name = document.getElementById('signup-name').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const pw = document.getElementById('signup-password').value;
+
+      if (!name) { shakeInput('signup-name'); showMsg('global-msg', 'Please enter your full name.'); return; }
+      if (!email) { shakeInput('signup-email'); showMsg('global-msg', 'Please enter your email address.'); return; }
+      if (pw.length < 8) { shakeInput('signup-password'); showMsg('global-msg', 'Password must be at least 8 characters.'); return; }
+
+      setLoading('signup-btn', true, 'Create Account →');
+      clearMsg('global-msg');
+
+      const { error } = await _sb.auth.signUp({
+        email,
+        password: pw,
+        options: { data: { full_name: name, exam_type: document.getElementById('signup-exam-type').value || 'subpro' } }
+      });
+
+      setLoading('signup-btn', false, 'Create Account →');
+
+      if (error) {
+        const msg = error.message.includes('already registered')
+          ? '⚠️ This email is already registered. Try signing in instead.'
+          : `❌ ${error.message}`;
+        showMsg('global-msg', msg, 'error');
+      } else {
+        showMsg('global-msg',
+          '📧 Check your email! We sent a confirmation link to ' + email + '. Click it to activate your account.',
+          'info');
+        // Clear form
+        document.getElementById('signup-name').value = '';
+        document.getElementById('signup-email').value = '';
+        document.getElementById('signup-password').value = '';
+        checkStrength('');
+      }
+    }
+
+    // ── GOOGLE AUTH ───────────────────────────────────────────────
+    async function doGoogleAuth() {
+      const { error } = await _sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + '/' + APP_FILE }
+      });
+      if (error) showMsg('global-msg', '❌ Google sign-in failed: ' + error.message, 'error');
+    }
+
+    // ── PASSWORD RESET ────────────────────────────────────────────
+    async function doReset() {
+      const email = document.getElementById('reset-email').value.trim();
+      if (!email) { shakeInput('reset-email'); showMsg('global-msg', 'Please enter your email address.'); return; }
+
+      setLoading('reset-btn', true, 'Send Reset Link');
+      clearMsg('global-msg');
+
+      const { error } = await _sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/' + APP_FILE
+      });
+
+      setLoading('reset-btn', false, 'Send Reset Link');
+
+      if (error) {
+        showMsg('global-msg', '❌ ' + error.message, 'error');
+      } else {
+        showMsg('global-msg',
+          '📧 Reset link sent! Check your inbox for ' + email,
+          'success');
+      }
+    }
+
+    // ── Enter key triggers submit ─────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const active = document.querySelector('.auth-panel.active');
+      if (!active) return;
+      const id = active.id;
+      if (id === 'panel-login') doLogin();
+      if (id === 'panel-signup') doSignUp();
+      if (id === 'panel-reset') doReset();
+    });
+  </script>
 </body>
 
 </html>
