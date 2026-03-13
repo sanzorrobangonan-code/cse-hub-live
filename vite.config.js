@@ -1,12 +1,14 @@
 import { defineConfig } from 'vite'
+
 export default defineConfig({
   base: './',
+  publicDir: 'public',
   build: {
     outDir: 'dist',
     rollupOptions: {
       input: {
-        index: 'index.html',   // login page — served as root /
-        home: 'home.html',     // main app — served after login
+        index: 'public/index.html',
+        home: 'public/home.html',
       }
     }
   },
