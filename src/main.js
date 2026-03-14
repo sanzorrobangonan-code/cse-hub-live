@@ -1086,6 +1086,7 @@ let _answeredQuestionIds = new Set(); // all unique question IDs the user has ev
 let _answeredQuestionsCache = []; // full question rows for Cards tab (exam-level filtered)
 let _historySortField = 'date';
 let _historySortAsc = false;
+let _historyFilter = 'all'; // 'all' | 'quiz' | 'mock' | 'mini'
 
 async function fetchQuizHistory() {
   if (!_sb) return [];
@@ -2908,13 +2909,38 @@ function getSubjectIcon(topic) {
   return '📚';
 }
 
+function getFilteredAttempts() {
+  switch (_historyFilter) {
+    case 'mock':  return _attemptHistoryCache.filter(a => a.exam_type === 'mock-test');
+    case 'mini':  return _attemptHistoryCache.filter(a => a.exam_type === 'mini-cse');
+    case 'quiz':  return _attemptHistoryCache.filter(a => a.exam_type !== 'mock-test' && a.exam_type !== 'mini-cse');
+    default:      return [..._attemptHistoryCache];
+  }
+}
+
+function setHistoryFilter(filter) {
+  _historyFilter = filter;
+  // Update pill button styles
+  document.querySelectorAll('.history-filter-btn').forEach(btn => {
+    const active = btn.dataset.filter === filter;
+    btn.style.cssText = active
+      ? 'padding:5px 14px;border-radius:999px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:var(--primary);color:#fff;'
+      : 'padding:5px 14px;border-radius:999px;border:1.5px solid var(--primary);font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--primary);';
+  });
+  // Update subtitle
+  const sub = document.getElementById('score-chart-sub');
+  const labels = { all: 'All activity · last 20', quiz: 'Regular quizzes · last 20', mock: 'Mock tests · last 20', mini: 'Mini mock · last 20' };
+  if (sub) sub.textContent = (labels[filter] || 'Last 20') + ' · CSE passing line at 80%';
+  renderScoreChart();
+  renderQuizHistory();
+}
+
 function renderScoreChart() {
   const canvas = document.getElementById('score-chart');
   if (!canvas) return;
 
-  // Use last 20 quizzes sorted oldest→newest (exclude mock-test)
-  const items = [..._attemptHistoryCache]
-    .filter(a => a.exam_type !== 'mock-test')
+  // Use last 20 attempts filtered by current filter, sorted oldest→newest
+  const items = getFilteredAttempts()
     .sort((a, b) => parseAttemptedAt(a.attempted_at) - parseAttemptedAt(b.attempted_at))
     .slice(-20);
 
@@ -3072,8 +3098,7 @@ function renderQuizHistory() {
   const list = document.getElementById('quiz-history-list');
   if (!list) return;
 
-  // Mock tests have their own dedicated tab — exclude them from home history
-  let items = _attemptHistoryCache.filter(a => a.exam_type !== 'mock-test');
+  let items = getFilteredAttempts();
   if (!items.length) {
     list.innerHTML = '<div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">No quizzes yet. Start one!</div>';
     return;
@@ -3255,7 +3280,7 @@ Object.assign(window, {
   toggleQuizSubject,
   startSubjectQuiz, startQuizForTopic, startQuizForDBTopic, startRandomQuiz, handleMiniCSE, startMockTest,
   selectAnswer, quizNext, retryQuiz, generateNewQuiz, exitQuizResult, confirmExitQuiz, toggleBookmark,
-  jumpToQuestion, sortHistory, renderScoreChart,
+  jumpToQuestion, sortHistory, renderScoreChart, setHistoryFilter,
   loadFlashcards, flipCard, nextCard, prevCard,
   setBmFilter, removeBookmark,
   showPremiumModal, showAbout, toggleDarkMode, toggleExamType, confirmLogout,
