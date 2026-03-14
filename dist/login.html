@@ -658,9 +658,14 @@
     }
 
     async function doGoogleAuth() {
+      // Always redirect to the production app after Google auth
+      const PROD_URL = 'https://cse-hub-live.vercel.app/home.html';
+      const redirectTo = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? window.location.origin + '/' + APP_FILE
+        : PROD_URL;
       const { error } = await _sb.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/' + APP_FILE }
+        options: { redirectTo, skipBrowserRedirect: false }
       });
       if (error) showMsg('global-msg', '❌ Google sign-in failed: ' + error.message, 'error');
     }
@@ -670,8 +675,11 @@
       if (!email) { shakeInput('reset-email'); showMsg('global-msg', 'Please enter your email address.'); return; }
       setLoading('reset-btn', true, 'Send Reset Link');
       clearMsg('global-msg');
+      const PROD_URL = 'https://cse-hub-live.vercel.app/home.html';
+      const resetRedirect = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? window.location.origin + '/' + APP_FILE : PROD_URL;
       const { error } = await _sb.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/' + APP_FILE
+        redirectTo: resetRedirect
       });
       setLoading('reset-btn', false, 'Send Reset Link');
       if (error) {

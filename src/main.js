@@ -2415,6 +2415,26 @@ async function loadUserAvatar() {
   } catch (e) { }
 }
 
+// ── Compress image using Canvas API before upload ──
+function compressImage(file, maxDimension = 400, quality = 0.75) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 // ── Upload selected file to Supabase Storage ──
 async function uploadAvatar(file) {
   if (!_sb || !currentUser) return;
@@ -2423,17 +2443,14 @@ async function uploadAvatar(file) {
     showToast('Only JPG, PNG, or WebP images allowed');
     return;
   }
-  if (file.size > 1024 * 1024) {
-    showToast('Image must be under 1MB');
-    return;
-  }
-  showToast('Uploading photo…');
+  showToast('Processing photo…');
+  // Compress to max 400×400 JPEG at 75% quality before uploading
+  const compressed = await compressImage(file, 400, 0.75);
   try {
     const path = `${currentUser.id}/avatar.png`;
-    // upsert:true replaces any existing file at the same path
     const { error: uploadErr } = await _sb.storage
       .from('avatars')
-      .upload(path, file, { upsert: true, contentType: file.type });
+      .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
     if (uploadErr) throw uploadErr;
     // Update profiles table so the URL persists across sessions
     await _sb.from('profiles').upsert({ id: currentUser.id, avatar_url: path }, { onConflict: 'id' });
@@ -2445,8 +2462,7 @@ async function uploadAvatar(file) {
     }
     showToast('Profile photo updated ✓');
   } catch (e) {
-    console.error('Avatar upload error:', e);
-    showToast('Upload failed: ' + (e?.message || JSON.stringify(e)));
+    showToast('Upload failed: ' + (e?.message || 'Please try again'));
   }
 }
 
