@@ -1087,6 +1087,7 @@ let _answeredQuestionsCache = []; // full question rows for Cards tab (exam-leve
 let _historySortField = 'date';
 let _historySortAsc = false;
 let _historyFilter = 'all'; // 'all' | 'quiz' | 'mock' | 'mini'
+let _mockHistoryFilter = 'all'; // 'all' | 'mock' | 'mini'
 
 async function fetchQuizHistory() {
   if (!_sb) return [];
@@ -1657,7 +1658,7 @@ function renderStudyMapFlat() {
 
 function renderQuizHome() {
   renderStudyMapFlat();
-  renderMiniCSECard();
+  renderQuizTabHistory();
 }
 
 function renderSubjectGrid() {
@@ -1787,45 +1788,8 @@ function renderMockScreen() {
       </div>`;
   }
 
-  // Render mock test history (only mock-test exam_type entries)
-  const histEl = document.getElementById('mock-history-list');
-  if (!histEl) return;
-
-  const mockAttempts = _attemptHistoryCache.filter(a => a.exam_type === 'mock-test');
-  if (!mockAttempts.length) {
-    histEl.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📋</div>
-      <div class="empty-title">No mock tests yet</div>
-      <div class="empty-sub">Complete your first mock test to track your progress here</div>
-    </div>`;
-    return;
-  }
-
-  histEl.innerHTML = mockAttempts.map(h => {
-    const pct = h.total_questions > 0 ? Math.round((h.score / h.total_questions) * 100) : 0;
-    const scoreClass = pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low';
-    const scoreEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📈' : '💪';
-    const d = parseAttemptedAt(h.attempted_at);
-    const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
-    const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
-    const enc = encodeURIComponent;
-    const resultLabel = pct >= 80 ? '✅ Passed' : '❌ Keep practicing';
-    return `<div class="history-card score-${scoreClass}"
-      onclick="openAttemptDetail('${h.id}','${enc(h.exam_type || '')}',${h.score},${h.total_questions},'${enc(h.attempted_at || '')}')">
-      <div class="history-score-badge ${scoreClass}" style="flex-direction:column;gap:1px;">
-        <div style="font-size:14px;line-height:1;">${scoreEmoji}</div>
-        <div style="font-size:13px;font-weight:900;">${pct}%</div>
-      </div>
-      <div class="history-info">
-        <div class="history-topic">📋 Mock Test — ${cfg.label}</div>
-        <div class="history-meta">${h.score}/${h.total_questions} correct &nbsp;·&nbsp; ${resultLabel}</div>
-        <div class="history-meta" style="margin-top:1px;">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
-      </div>
-      <div class="history-details">
-        <div style="font-size:20px;color:var(--ink-lt);">›</div>
-      </div>
-    </div>`;
-  }).join('');
+  renderMiniCSECard();
+  renderMockHistory();
 }
 
 async function startMockTest() {
@@ -3171,20 +3135,148 @@ function renderQuizHistory() {
       </div>
     </div>`;
   }).join('');
+  renderQuizTabHistory();
+}
+
+function renderQuizTabHistory() {
+  const list = document.getElementById('quiz-tab-history-list');
+  if (!list) return;
+  // Quiz tab always shows regular quizzes only (mock/mini have their own tab)
+  let items = _attemptHistoryCache.filter(a => getExamCategory(a.exam_type) === 'quiz');
+  if (!items.length) {
+    list.innerHTML = '<div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">No quizzes yet. Start one!</div>';
+    return;
+  }
+  items.sort((a, b) => parseAttemptedAt(b.attempted_at) - parseAttemptedAt(a.attempted_at));
+  list.innerHTML = items.map(h => {
+    const pct = h.total_questions > 0 ? Math.round((h.score / h.total_questions) * 100) : 0;
+    const scoreClass = pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low';
+    const scoreEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📈' : '💪';
+    const name = getTopicDisplayName(h.exam_type) || h.exam_type || 'Quiz';
+    const subj = getTopicSubject(h.exam_type);
+    const icon = getSubjectIcon(h.exam_type);
+    const d = parseAttemptedAt(h.attempted_at);
+    const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
+    const enc = encodeURIComponent;
+    return `<div class="history-card score-${scoreClass}" style="position:relative;">
+      <div title="Delete this record"
+        onclick="event.stopPropagation();deleteAttempt('${h.id}')"
+        style="position:absolute;top:8px;right:8px;z-index:2;width:22px;height:22px;border-radius:50%;background:rgba(185,28,28,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#B91C1C;font-weight:900;line-height:1;">×</div>
+      <div class="history-card-inner" onclick="openAttemptDetail('${h.id}','${enc(h.exam_type || '')}',${h.score},${h.total_questions},'${enc(h.attempted_at || '')}')" style="display:flex;align-items:center;gap:10px;width:100%;padding-right:28px;cursor:pointer;">
+        <div class="history-score-badge ${scoreClass}" style="flex-direction:column;gap:1px;">
+          <div style="font-size:14px;line-height:1;">${scoreEmoji}</div>
+          <div style="font-size:13px;font-weight:900;">${pct}%</div>
+        </div>
+        <div class="history-info">
+          <div class="history-topic">${icon} ${name}</div>
+          <div class="history-meta">${h.score}/${h.total_questions} correct &nbsp;·&nbsp; ${subj}</div>
+          <div class="history-meta" style="margin-top:1px;">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function deleteAttempt(id) {
-  if (!confirm('Delete this record? This cannot be undone.')) return;
   if (!_sb) return;
-  try {
-    const { error } = await _sb.from('quiz_attempts').delete().eq('id', id);
-    if (error) { showToast('Delete failed: ' + error.message); return; }
-    // Remove from cache
-    _attemptHistoryCache = _attemptHistoryCache.filter(a => a.id !== id);
-    renderQuizHistory();
-    requestAnimationFrame(renderScoreChart);
-    showToast('Record deleted.');
-  } catch (e) { showToast('Delete failed.'); }
+  showModal(
+    '🗑️ Delete Record',
+    'This will permanently delete this attempt and all its answers. This cannot be undone.',
+    [
+      { label: 'Cancel', cls: 'secondary', action: hideModal },
+      {
+        label: 'Delete', cls: 'danger', action: async () => {
+          hideModal();
+          showLoading('Deleting…');
+          try {
+            // Delete related answers first (avoids FK constraint issues)
+            await _sb.from('quiz_answers').delete().eq('attempt_id', id);
+            const { error } = await _sb.from('quiz_attempts').delete().eq('id', id);
+            hideLoading();
+            if (error) { showToast('Delete failed: ' + error.message); return; }
+            _attemptHistoryCache = _attemptHistoryCache.filter(a => a.id !== id);
+            renderQuizHistory();
+            renderMockHistory();
+            requestAnimationFrame(renderScoreChart);
+            showToast('Record deleted.');
+          } catch (e) { hideLoading(); showToast('Delete failed.'); }
+        }
+      }
+    ]
+  );
+}
+
+function setMockHistoryFilter(filter) {
+  _mockHistoryFilter = filter;
+  document.querySelectorAll('.mock-filter-btn').forEach(btn => {
+    const active = btn.dataset.filter === filter;
+    btn.style.cssText = active
+      ? 'padding:5px 14px;border-radius:999px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:var(--primary);color:#fff;'
+      : 'padding:5px 14px;border-radius:999px;border:1.5px solid var(--primary);font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--primary);';
+  });
+  renderMockHistory();
+}
+
+function renderMockHistory() {
+  const histEl = document.getElementById('mock-history-list');
+  if (!histEl) return;
+
+  let items;
+  if (_mockHistoryFilter === 'mock') {
+    items = _attemptHistoryCache.filter(a => getExamCategory(a.exam_type) === 'mock');
+  } else if (_mockHistoryFilter === 'mini') {
+    items = _attemptHistoryCache.filter(a => getExamCategory(a.exam_type) === 'mini');
+  } else {
+    items = _attemptHistoryCache.filter(a => {
+      const cat = getExamCategory(a.exam_type);
+      return cat === 'mock' || cat === 'mini';
+    });
+  }
+
+  items = [...items].sort((a, b) => parseAttemptedAt(b.attempted_at) - parseAttemptedAt(a.attempted_at));
+
+  if (!items.length) {
+    const msgs = { all: 'No mock or mini mock attempts yet.', mock: 'No mock tests yet.', mini: 'No mini mock tests yet.' };
+    histEl.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">${msgs[_mockHistoryFilter] || 'No attempts yet.'}</div>
+      <div class="empty-sub">Complete a mock or mini mock test to see your history here</div>
+    </div>`;
+    return;
+  }
+
+  histEl.innerHTML = items.map(h => {
+    const cat = getExamCategory(h.exam_type);
+    const pct = h.total_questions > 0 ? Math.round((h.score / h.total_questions) * 100) : 0;
+    const scoreClass = pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low';
+    const scoreEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📈' : '💪';
+    const name = getTopicDisplayName(h.exam_type) || h.exam_type || 'Mock Test';
+    const d = parseAttemptedAt(h.attempted_at);
+    const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
+    const enc = encodeURIComponent;
+    const resultLabel = pct >= 80 ? '✅ Passed' : '❌ Keep practicing';
+    const typeBadge = cat === 'mock'
+      ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEE2E2;color:#B91C1C;letter-spacing:.3px;">MOCK TEST</span>`
+      : `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEF3C7;color:#D97706;letter-spacing:.3px;">MINI MOCK</span>`;
+    return `<div class="history-card score-${scoreClass}" style="position:relative;">
+      <div title="Delete this record"
+        onclick="event.stopPropagation();deleteAttempt('${h.id}')"
+        style="position:absolute;top:8px;right:8px;z-index:2;width:22px;height:22px;border-radius:50%;background:rgba(185,28,28,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#B91C1C;font-weight:900;line-height:1;">×</div>
+      <div class="history-card-inner" onclick="openAttemptDetail('${h.id}','${enc(h.exam_type || '')}',${h.score},${h.total_questions},'${enc(h.attempted_at || '')}')" style="display:flex;align-items:center;gap:10px;width:100%;padding-right:28px;cursor:pointer;">
+        <div class="history-score-badge ${scoreClass}" style="flex-direction:column;gap:1px;">
+          <div style="font-size:14px;line-height:1;">${scoreEmoji}</div>
+          <div style="font-size:13px;font-weight:900;">${pct}%</div>
+        </div>
+        <div class="history-info">
+          <div class="history-topic" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${cat === 'mock' ? '📋' : '🎯'} ${name} ${typeBadge}</div>
+          <div class="history-meta">${h.score}/${h.total_questions} correct &nbsp;·&nbsp; ${resultLabel}</div>
+          <div class="history-meta" style="margin-top:1px;">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function sortHistory(field) {
@@ -3323,6 +3415,7 @@ Object.assign(window, {
   startSubjectQuiz, startQuizForTopic, startQuizForDBTopic, startRandomQuiz, handleMiniCSE, startMockTest,
   selectAnswer, quizNext, retryQuiz, generateNewQuiz, exitQuizResult, confirmExitQuiz, toggleBookmark,
   jumpToQuestion, sortHistory, renderScoreChart, setHistoryFilter, deleteAttempt,
+  setMockHistoryFilter, renderMockHistory,
   loadFlashcards, flipCard, nextCard, prevCard,
   setBmFilter, removeBookmark,
   showPremiumModal, showAbout, toggleDarkMode, toggleExamType, confirmLogout,
