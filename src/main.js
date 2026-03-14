@@ -1117,10 +1117,16 @@ function getLocalDateStr(date) {
 
 function computeStreak(studiedDates = []) {
   if (!studiedDates.length) return 0;
-  const unique = [...new Set(studiedDates.map(d => d.slice(0, 10)))].sort().reverse();
   const now = Date.now();
   const today = new Date(now).toLocaleDateString('en-CA', { timeZone: PH_TZ });
   const yest = new Date(now - 86400000).toLocaleDateString('en-CA', { timeZone: PH_TZ });
+  // Filter out future dates (can happen when a quiz is done just past midnight PH but
+  // the home was rendered slightly earlier) and deduplicate, then sort descending.
+  const unique = [...new Set(studiedDates.map(d => d.slice(0, 10)))]
+    .filter(d => d <= today)
+    .sort()
+    .reverse();
+  if (!unique.length) return 0;
   if (unique[0] !== today && unique[0] !== yest) return 0;
   let streak = 1;
   for (let i = 1; i < unique.length; i++) {
@@ -1552,10 +1558,13 @@ async function refreshUserData() {
   if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
   try {
     _attemptHistoryCache = await loadQuizHistory();
-    // Replace studiedDates from DB (source of truth) — never merge stale local dates
+    // Replace studiedDates from DB (source of truth) — never merge stale local dates.
+    // Only count attempts that have a real attempted_at (completed quizzes).
     const stats = getStats();
     stats.studiedDates = [...new Set(
-      _attemptHistoryCache.map(a => getLocalDateStr(parseAttemptedAt(a.attempted_at)))
+      _attemptHistoryCache
+        .filter(a => a.attempted_at)
+        .map(a => getLocalDateStr(parseAttemptedAt(a.attempted_at)))
     )];
     saveStats(stats);
     await Promise.all([loadAllSubjectTopics(), loadTopicAttemptCounts()]);
@@ -2909,11 +2918,21 @@ function getSubjectIcon(topic) {
   return '📚';
 }
 
+// Returns 'mock' | 'mini' | 'quiz' for any exam_type value stored in the DB.
+// DB stores the label string (e.g. 'Mock Test — Professional', 'Mini Civil Service Exam')
+// OR the key string ('mock-test', 'mini-cse') depending on code version.
+function getExamCategory(examType) {
+  const t = (examType || '').toLowerCase();
+  if (examType === 'mock-test' || t.startsWith('mock test') || t.includes('mock test')) return 'mock';
+  if (examType === 'mini-cse' || examType === 'Mini Civil Service Exam' || t === 'mini civil service exam') return 'mini';
+  return 'quiz';
+}
+
 function getFilteredAttempts() {
   switch (_historyFilter) {
-    case 'mock':  return _attemptHistoryCache.filter(a => a.exam_type === 'mock-test');
-    case 'mini':  return _attemptHistoryCache.filter(a => a.exam_type === 'mini-cse');
-    case 'quiz':  return _attemptHistoryCache.filter(a => a.exam_type !== 'mock-test' && a.exam_type !== 'mini-cse');
+    case 'mock':  return _attemptHistoryCache.filter(a => getExamCategory(a.exam_type) === 'mock');
+    case 'mini':  return _attemptHistoryCache.filter(a => getExamCategory(a.exam_type) === 'mini');
+    case 'quiz':  return _attemptHistoryCache.filter(a => getExamCategory(a.exam_type) === 'quiz');
     default:      return [..._attemptHistoryCache];
   }
 }
@@ -3129,11 +3148,10 @@ function renderQuizHistory() {
     const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
     const enc = encodeURIComponent;
     // Type badge
-    const isMock = h.exam_type === 'mock-test';
-    const isMini = h.exam_type === 'mini-cse';
-    const typeBadge = isMock
+    const cat = getExamCategory(h.exam_type);
+    const typeBadge = cat === 'mock'
       ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEE2E2;color:#B91C1C;letter-spacing:.3px;">MOCK TEST</span>`
-      : isMini
+      : cat === 'mini'
         ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEF3C7;color:#D97706;letter-spacing:.3px;">MINI MOCK</span>`
         : `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#E8EEFF;color:#2B4ACB;letter-spacing:.3px;">QUIZ</span>`;
     return `<div class="history-card score-${scoreClass}" style="position:relative;">
