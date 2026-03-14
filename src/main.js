@@ -682,9 +682,16 @@ const SUBJECT_META = [
   { key: 'verbal', label: 'Verbal Ability', icon: '📝', color: 'var(--blue-lt)', text: 'var(--blue-dk)', topics: ['grammar', 'vocabulary', 'reading'] },
   { key: 'numerical', label: 'Numerical Ability', icon: '🔢', color: 'var(--green-lt)', text: 'var(--green-dk)', topics: ['basicops', 'wordprobs'] },
   { key: 'analytical', label: 'Analytical Ability', icon: '🧩', color: 'var(--yellow-lt)', text: 'var(--yellow-dk)', topics: ['logic', 'wordassoc'] },
-  { key: 'clerical', label: 'Clerical Ability', icon: '📋', color: 'var(--purple-lt)', text: 'var(--purple-dk)', topics: ['clerical'] },
+  { key: 'clerical', label: 'Clerical Ability', icon: '📋', color: 'var(--purple-lt)', text: 'var(--purple-dk)', topics: ['clerical'], subproOnly: true },
   { key: 'geninfo', label: 'General Information', icon: '🏛️', color: 'var(--orange-lt)', text: 'var(--orange-dk)', topics: ['geninfo'] },
 ];
+
+// Returns subjects relevant to the current exam type
+// Clerical Ability is Sub-Professional only
+function getActiveSubjectMeta() {
+  const isPro = getUserExamType() === 'professional';
+  return SUBJECT_META.filter(s => !(s.subproOnly && isPro));
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE + HELPERS
@@ -1041,13 +1048,19 @@ function getUserExamType() {
   return localStorage.getItem('cse_exam_type') || 'subpro';
 }
 // Maps internal exam type key → database exam_level value
+// DB stores "Sub-Professional" and "Professional" (with hyphen and capital letters)
 function getExamLevelForDB() {
-  return getUserExamType() === 'professional' ? 'professional' : 'subprofessional';
+  return getUserExamType() === 'professional' ? 'Professional' : 'Sub-Professional';
 }
 
 function setUserExamType(type) {
   localStorage.setItem('cse_exam_type', type);
-  // Also try to update Supabase metadata
+  // Update in-memory user object immediately so getUserExamType() reflects the change
+  if (currentUser) {
+    if (!currentUser.user_metadata) currentUser.user_metadata = {};
+    currentUser.user_metadata.exam_type = type;
+  }
+  // Also persist to Supabase metadata (async, best-effort)
   if (_sb) {
     _sb.auth.updateUser({ data: { exam_type: type } }).catch(() => { });
   }
@@ -1359,7 +1372,7 @@ function renderSidebarStudyMap() {
   const body = document.getElementById('sidebar-map-body');
   if (!body) return;
   let html = '';
-  SUBJECT_META.forEach(subj => {
+  getActiveSubjectMeta().forEach(subj => {
     const pct = getSubjectPreparedness(subj.key);
     const color = pct >= 80 ? '#16a34a' : pct >= 50 ? '#0d9488' : pct >= 30 ? '#d97706' : pct > 0 ? '#dc2626' : '#d0d5ef';
     html += `<div class="sidebar-map-row">
@@ -1380,7 +1393,7 @@ function renderStudyMap() {
   if (!body) return;
 
   let html = '';
-  SUBJECT_META.forEach(subj => {
+  getActiveSubjectMeta().forEach(subj => {
     const subjPct = getSubjectPreparedness(subj.key);
     const barColor = subjPct >= 80 ? '#16a34a' : subjPct >= 50 ? '#0d9488' : subjPct >= 30 ? '#d97706' : subjPct > 0 ? '#dc2626' : '#e5e7eb';
 
@@ -1571,7 +1584,7 @@ function renderStudyMapFlat() {
   const body = document.getElementById('study-map-body-quiz');
   if (!body) return;
   let html = '';
-  SUBJECT_META.forEach(subj => {
+  getActiveSubjectMeta().forEach(subj => {
     const subjPct = getSubjectPreparedness(subj.key);
     const barColor = subjPct >= 80 ? '#16a34a' : subjPct >= 50 ? '#0d9488' : subjPct >= 30 ? '#d97706' : subjPct > 0 ? '#dc2626' : '#e5e7eb';
     html += `<div class="map-subject-block">
@@ -1706,7 +1719,7 @@ async function startRandomQuiz() {
   showLoading('Loading random mix…');
   try {
     let allQ = [];
-    for (const subj of SUBJECT_META) {
+    for (const subj of getActiveSubjectMeta()) {
       const rows = await fetchBySubject(subj.label);
       allQ = allQ.concat(rows);
     }
@@ -2491,7 +2504,7 @@ function renderProfile() {
   // Subject progress overview
   const progEl = document.getElementById('profile-progress-overview');
   if (progEl) {
-    progEl.innerHTML = SUBJECT_META.map(subj => {
+    progEl.innerHTML = getActiveSubjectMeta().map(subj => {
       const pct = getSubjectPreparedness(subj.key);
       const col = pct >= 80 ? '#16a34a' : pct >= 50 ? '#0d9488' : pct >= 20 ? '#d97706' : '#e5e7eb';
       return `<div class="prof-subj-row">
@@ -2542,7 +2555,10 @@ function toggleExamType() {
   const newType = current === 'subpro' ? 'professional' : 'subpro';
   setUserExamType(newType);
   renderProfile();
+  renderStudyMap();
+  renderSidebarStudyMap();
   if (currentScreen === 'mock') renderMockScreen();
+  if (currentScreen === 'quiz-home') renderQuizHome();
   showToast(`Exam type set to ${MOCK_TEST_CONFIG[newType].label}`);
 }
 
@@ -3193,12 +3209,7 @@ async function initApp() {
   } catch (e) { }
 }
 
-// Show About screen for first-time users (no stats yet), otherwise Home
-(function () {
-  const stats = getStats();
-  const isNew = !stats.totalAnswered && !stats.studiedDates.length;
-  goTo(isNew ? 'about' : 'home');
-})();
+goTo('home');
 initApp();
 
 // ═══════════════════════════════════════════════════════════════
