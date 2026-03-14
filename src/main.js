@@ -873,7 +873,7 @@ async function fetchBySubject(subject) {
     .from('questions')
     .select('id,subject,topic,question,choice_a,choice_b,choice_c,choice_d,choice_e,correct_answer,explanation')
     .eq('subject', subject)
-    .or(`exam_level.ilike.${examLevel},exam_level.ilike.both`);
+    .or(`exam_level.ilike.${examLevel},exam_level.ilike.both,exam_level.is.null`);
   if (error) throw new Error(`Supabase error (${subject}): ${error.message}`);
   return (data || []).map(mapRow);
 }
@@ -906,7 +906,7 @@ async function fetchTopicQuestions(topic, count = 10) {
         .from('questions')
         .select('id,subject,topic,question,choice_a,choice_b,choice_c,choice_d,choice_e,correct_answer,explanation')
         .eq('subject', subject)
-        .or(`exam_level.ilike.${examLevel},exam_level.ilike.both`)
+        .or(`exam_level.ilike.${examLevel},exam_level.ilike.both,exam_level.is.null`)
         .in('topic', dbTopics);
       if (!error && data?.length) return pickRandom(data.map(mapRow), count);
     } catch (e) { /* fall through to subject-level fetch */ }
@@ -1001,7 +1001,7 @@ async function loadAllSubjectTopics() {
     const { data, error } = await _sb
       .from('questions')
       .select('subject, topic')
-      .or(`exam_level.ilike.${examLevel},exam_level.ilike.both`)
+      .or(`exam_level.ilike.${examLevel},exam_level.ilike.both,exam_level.is.null`)
       .not('topic', 'is', null)
       .neq('topic', '');
     if (error || !data?.length) return;
@@ -2515,15 +2515,15 @@ function renderProfile() {
 }
 
 function showPremiumModal() {
-  showModal('⭐ CSE Pro Premium',
+  showModal('⭐ CSE Ready Premium',
     'Unlock all subjects, unlimited daily quizzes, detailed analytics, and priority question updates.',
     [{ label: 'Maybe Later', cls: 'secondary', action: hideModal },
     { label: 'Upgrade Now ⭐', cls: 'primary', action: () => { hideModal(); showToast('Coming soon! 🚀'); } }]);
 }
 
 function showAbout() {
-  showModal('CSE Pro Reviewer',
-    'Version 5.0\n\nYour smart study companion for passing the Philippine Civil Service Exam. Study smarter, not harder!\n\nAll questions are sourced from official CSE materials.',
+  showModal('CSE Ready – Civil Service Exam Reviewer PH',
+    'Version 5.0\n\nThe most complete Civil Service Exam reviewer online. 5000+ questions, mock tests, quizzes, and flashcards for easy review with detailed explanations.\n\nBe exam-ready. Be CSE Ready.',
     [{ label: 'OK', cls: 'primary', action: hideModal }]);
 }
 
@@ -2780,9 +2780,9 @@ function renderAttemptDetail(attempt, answers) {
   if (!titleEl || !listEl) return;
 
   const pct = attempt.total > 0 ? Math.round((attempt.score / attempt.total) * 100) : 0;
-  const d = attempt.attemptedAt ? new Date(attempt.attemptedAt) : null;
-  const dateStr = d ? d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
-  const timeStr = d ? d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : '';
+  const d = parseAttemptedAt(attempt.attemptedAt);
+  const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
 
   const displayName = getTopicDisplayName(attempt.examType) || attempt.examType || 'Quiz Review';
   const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '🌟' : pct >= 40 ? '💪' : '📚';
