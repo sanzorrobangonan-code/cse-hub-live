@@ -9,8 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <title>CSE Pro Reviewer</title>
-  <script type="module" crossorigin src="./assets/home-C-gkBrFg.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/home-CuM7y4GF.css">
+  <script type="module" crossorigin src="./assets/home-Ch9a0bta.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/home-Br1tXPrH.css">
 </head>
 
 <body>
@@ -24,7 +24,6 @@
       </div>
     </div>
     <nav class="sidebar-nav">
-      <button class="sidebar-nav-item" id="sidebar-nav-about" onclick="goTo('about')"><span class="sidebar-nav-icon">📖</span><span class="sidebar-nav-label">About</span></button>
       <button class="sidebar-nav-item" id="sidebar-nav-home" onclick="goTo('home')"><span class="sidebar-nav-icon">🏠</span><span class="sidebar-nav-label">Home</span></button>
       <button class="sidebar-nav-item" id="sidebar-nav-quiz-home" onclick="goTo('quiz-home')"><span class="sidebar-nav-icon">📝</span><span class="sidebar-nav-label">Quiz</span></button>
       <button class="sidebar-nav-item" id="sidebar-nav-mock" onclick="goTo('mock')"><span class="sidebar-nav-icon">📋</span><span class="sidebar-nav-label">Mock Test</span></button>
@@ -48,6 +47,9 @@
     </div>
     <div class="sidebar-section-title">🗺️ Progress</div>
     <div class="sidebar-map-body" id="sidebar-map-body"></div>
+    <div class="sidebar-signout-wrap">
+      <button class="sidebar-signout-btn" onclick="confirmLogout()">🚪 Sign Out</button>
+    </div>
   </aside>
   <div id="app-root">
 
@@ -322,130 +324,7 @@
       </div>
     </div>
 
-    <div id="screen-about" class="screen">
-      <div class="about-hero">
-        <img src="./logo.png" alt="CSE Pro" class="about-logo" />
-        <div class="about-hero-title">CSE Pro Reviewer</div>
-        <div class="about-hero-sub">Your smartest path to civil service eligibility</div>
-        <div class="about-hero-chips">
-          <span class="about-chip">📋 Sub-Professional</span>
-          <span class="about-chip">🎓 Professional</span>
-        </div>
-      </div>
-      <div class="scroll-area">
-
-        <div class="section-title">📌 What is the CSE?</div>
-        <div class="about-card">
-          <div class="about-card-body">
-            The <strong>Civil Service Examination (CSE)</strong> is the Philippines' mandatory gateway to permanent government employment, administered by the Civil Service Commission (CSC). Passing it gives you <em>civil service eligibility</em> — the #1 legal requirement for any plantilla position.
-          </div>
-          <div class="about-alert">
-            ⚠️ Over <strong>80–85%</strong> of all test-takers fail every cycle. The national passing rate has hovered between <strong>9–18%</strong> for the past decade. Structured, focused review is what separates passers from the rest.
-          </div>
-        </div>
-
-        <div class="section-title">⚖️ Two Exam Levels</div>
-        <div class="about-level-row">
-          <div class="about-level-card subpro">
-            <div class="about-level-badge">Sub-Professional</div>
-            <div class="about-level-icon">📋</div>
-            <div class="about-level-items">
-              <div class="about-level-item">🕐 2 hrs 40 min</div>
-              <div class="about-level-item">📝 165 items</div>
-              <div class="about-level-item">🎓 HS grad / 2 yrs college</div>
-              <div class="about-level-item">💼 1st-level gov't positions</div>
-              <div class="about-level-item">📁 Includes Clerical Ability</div>
-            </div>
-          </div>
-          <div class="about-level-card pro">
-            <div class="about-level-badge">Professional</div>
-            <div class="about-level-icon">🎓</div>
-            <div class="about-level-items">
-              <div class="about-level-item">🕐 3 hrs 10 min</div>
-              <div class="about-level-item">📝 170 items</div>
-              <div class="about-level-item">🎓 4-year degree</div>
-              <div class="about-level-item">💼 1st &amp; 2nd-level positions</div>
-              <div class="about-level-item">🧠 Logic &amp; Analogy included</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-title">📚 Subjects Covered</div>
-        <div class="about-subjects-grid">
-          <div class="about-subj-pill verbal">📝 Verbal Ability<div class="about-subj-sub">Grammar · Vocab · Reading</div></div>
-          <div class="about-subj-pill numerical">🔢 Numerical Ability<div class="about-subj-sub">Arithmetic · Word Problems</div></div>
-          <div class="about-subj-pill analytical">🧩 Analytical Ability<div class="about-subj-sub">Logic · Word Associations</div></div>
-          <div class="about-subj-pill clerical">📋 Clerical Ability<div class="about-subj-sub">Sub-Pro level only</div></div>
-          <div class="about-subj-pill geninfo">🏛️ General Information<div class="about-subj-sub">Constitution · RA 6713 · Env.</div></div>
-        </div>
-
-        <div class="about-pass-banner">
-          <div class="about-pass-num">80%</div>
-          <div class="about-pass-text">
-            <div class="about-pass-title">Passing Score Required</div>
-            <div class="about-pass-sub">The CSC mandates a strict 80% general rating. No rounding, no curving — 79.99% is a definitive fail.</div>
-          </div>
-        </div>
-
-        <div class="section-title">🚀 How CSE Pro Helps You</div>
-        <div class="about-features-list">
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--blue-lt);">📝</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Topic-Focused Quizzes</div>
-              <div class="about-feature-sub">5-question drills per topic so you build mastery fast. Pinpoint weak spots without wasting time.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--green-lt);">🎯</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Mini CSE &amp; Mock Tests</div>
-              <div class="about-feature-sub">Simulate the real exam — a 45-item Mini CSE and a full timed Mock Test with authentic question distribution.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--gold-lt);">💡</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Smart Daily Recommendation</div>
-              <div class="about-feature-sub">The app tells you exactly what to study today — rotating through all subjects all week so nothing gets left behind.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--purple-lt);">📊</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Full Progress Tracking</div>
-              <div class="about-feature-sub">Study Map shows your readiness per subject. Every attempt is saved — review your wrong answers with explanations.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--orange-lt);">🃏</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Flash Cards</div>
-              <div class="about-feature-sub">Quick-flip cards for key terms, laws, and definitions. Perfect for commute reviews.</div>
-            </div>
-          </div>
-          <div class="about-feature-row">
-            <div class="about-feature-icon" style="background:var(--red-lt);">🔥</div>
-            <div class="about-feature-info">
-              <div class="about-feature-title">Streak &amp; Motivation</div>
-              <div class="about-feature-sub">Daily streaks and badges keep you accountable. Consistency is the single biggest predictor of passing.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="about-cta-card">
-          <div class="about-cta-emoji">🏆</div>
-          <div class="about-cta-title">You Can Pass This Exam</div>
-          <div class="about-cta-body">Most people fail because they don't know what to focus on or they don't practice consistently. CSE Pro is built around exactly what the exam tests. Start with one topic today. Be consistent. You've got this, future government employee! 🇵🇭</div>
-          <button class="about-cta-btn" onclick="goTo('home')">Start Reviewing Now →</button>
-        </div>
-
-        <div class="about-version">CSE Pro · Version 5.0 · Built for passers 🇵🇭</div>
-      </div>
-    </div>
-
     <nav id="bottom-nav">
-      <button class="nav-item" id="nav-about" onclick="goTo('about')"><span class="nav-icon">📖</span>About</button>
       <button class="nav-item" id="nav-home" onclick="goTo('home')"><span class="nav-icon">🏠</span>Home</button>
       <button class="nav-item" id="nav-quiz-home" onclick="goTo('quiz-home')"><span class="nav-icon">📝</span>Quiz</button>
       <button class="nav-item" id="nav-mock" onclick="goTo('mock')"><span class="nav-icon">📋</span>Mock</button>
