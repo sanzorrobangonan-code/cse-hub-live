@@ -16,8 +16,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <meta name="description" content="CSE Ready – The most complete Civil Service Exam reviewer online. 5000+ questions, mock tests, quizzes, and flashcards for easy review and detailed explanations. Be exam-ready. Be CSE Ready." />
   <title>CSE Ready – Civil Service Exam Reviewer PH</title>
-  <script type="module" crossorigin src="./assets/home-C2HtDeof.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/home-Br1tXPrH.css">
+  <script type="module" crossorigin src="./assets/home-Cf9Pe9ow.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/home-CK0UBdM1.css">
 </head>
 
 <body>
@@ -51,6 +51,7 @@
       <div class="sidebar-rec-label" id="sidebar-rec-label">Recommendation</div>
       <div class="sidebar-rec-topic" id="sidebar-rec-topic">Loading…</div>
       <div class="sidebar-rec-why" id="sidebar-rec-why"></div>
+      <div class="sidebar-rec-cta" id="sidebar-rec-cta">Start Quiz →</div>
     </div>
     <div class="sidebar-section-title">🗺️ Progress</div>
     <div class="sidebar-map-body" id="sidebar-map-body"></div>
@@ -74,6 +75,7 @@
               <div class="home-header-text">
                 <div class="home-greeting">Good day,</div>
                 <div class="home-name" id="home-name" onclick="goTo('profile')" style="cursor:pointer;"></div>
+                <div id="home-exam-level" style="margin-top:3px;"></div>
                 <div class="home-date" id="home-date"></div>
               </div>
             </div>
@@ -275,7 +277,24 @@
               <div id="mini-cse-badge" class="mini-cse-badge">🔓 Ready! Tap to start</div>
             </div>
           </div>
-          <button class="mock-start-btn" style="background:linear-gradient(135deg,#C0272D,#8B0000);margin-top:10px;" onclick="event.stopPropagation();handleMiniCSE()">Start Mini CSE →</button>
+          <!-- Stats row matching Mock Test card style -->
+          <div style="display:flex;gap:0;background:rgba(0,0,0,.25);border-radius:12px;overflow:hidden;margin:12px 0 10px;position:relative;">
+            <div style="flex:1;padding:10px 6px;text-align:center;">
+              <div style="font-size:18px;font-weight:900;color:#fff;">45</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;margin-top:2px;">Questions</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,.15);"></div>
+            <div style="flex:1;padding:10px 6px;text-align:center;">
+              <div style="font-size:18px;font-weight:900;color:#fff;">~30m</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;margin-top:2px;">Self-paced</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,.15);"></div>
+            <div style="flex:1;padding:10px 6px;text-align:center;">
+              <div style="font-size:18px;font-weight:900;color:#fff;">80%</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;margin-top:2px;">Passing Score</div>
+            </div>
+          </div>
+          <button style="width:100%;padding:14px;border:none;border-radius:12px;background:rgba(0,0,0,.3);color:#fff;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.02em;" onclick="event.stopPropagation();handleMiniCSE()">Start Mini CSE →</button>
         </div>
         <div class="section-title">📋 Full Mock Test</div>
         <div id="mock-exam-info"></div>

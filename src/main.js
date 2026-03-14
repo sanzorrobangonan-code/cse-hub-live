@@ -1143,8 +1143,14 @@ function buildWeekDots(studiedDates = []) {
   const now = Date.now();
   const todayStr = new Date(now).toLocaleDateString('en-CA', { timeZone: PH_TZ });
   const wdFmt = new Intl.DateTimeFormat('en-US', { timeZone: PH_TZ, weekday: 'short' });
+  const streakLen = computeStreak(studiedDates);
+  // Start from first streak day on left; if no streak, show last 7 days ending today
+  const totalDays = 7;
+  const daysBack = streakLen > 0 ? Math.min(streakLen - 1, totalDays - 1) : totalDays - 1;
+  const daysFwd = totalDays - 1 - daysBack;
   let html = '';
-  for (let i = 6; i >= 0; i--) {
+  // Past days (streak days and before), leftmost = oldest
+  for (let i = daysBack; i >= 0; i--) {
     const d = new Date(now - i * 86400000);
     const iso = d.toLocaleDateString('en-CA', { timeZone: PH_TZ });
     const done = studied.has(iso);
@@ -1153,6 +1159,15 @@ function buildWeekDots(studiedDates = []) {
     html += `<div class="week-dot-col">
       <div class="week-dot-label">${dayLabel}</div>
       <div class="week-dot ${done ? 'done' : ''} ${isToday ? 'today' : ''}"></div>
+    </div>`;
+  }
+  // Future placeholder days (greyed out)
+  for (let i = 1; i <= daysFwd; i++) {
+    const d = new Date(now + i * 86400000);
+    const dayLabel = wdFmt.format(d).slice(0, 2);
+    html += `<div class="week-dot-col" style="opacity:0.35;">
+      <div class="week-dot-label">${dayLabel}</div>
+      <div class="week-dot"></div>
     </div>`;
   }
   return html;
@@ -1261,6 +1276,16 @@ function renderHome() {
 
   const dateEl = document.getElementById('home-date');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-PH', { timeZone: PH_TZ, weekday: 'long', month: 'long', day: 'numeric' });
+
+  // Exam level + motivation tag below name
+  const examLevelEl = document.getElementById('home-exam-level');
+  if (examLevelEl) {
+    const examType = getUserExamType();
+    const lvlLabel = examType === 'professional' ? 'Professional' : 'Sub-Professional';
+    const motivations = ['Future Passer! 🌟', 'You Can Do It! 💪', 'Keep Pushing! 🔥', 'Stay Focused! 📚', 'CSE Ready! 🎯'];
+    const mot = motivations[new Date().getDay() % motivations.length];
+    examLevelEl.innerHTML = `<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.18);color:rgba(255,255,255,0.9);letter-spacing:.03em;">${lvlLabel} · ${mot}</span>`;
+  }
 
   // Streak count
   const sc = document.getElementById('streak-count');
@@ -1765,26 +1790,36 @@ function renderMockScreen() {
   const subEl = document.getElementById('mock-screen-sub');
   if (subEl) subEl.textContent = `${cfg.label} · ${cfg.items} items · ${hrs}h ${mins}m`;
 
-  // Render exam info card with stats and start button
+  // Render Full Mock Test card — dark gradient style matching Mini CSE card
   const infoEl = document.getElementById('mock-exam-info');
   if (infoEl) {
     infoEl.innerHTML = `
-      <div class="mock-info-card">
-        <div class="mock-info-row">
-          <div class="mock-info-item">
-            <div class="mock-info-num">${cfg.items}</div>
-            <div class="mock-info-lbl">Questions</div>
-          </div>
-          <div class="mock-info-item">
-            <div class="mock-info-num">${hrs}h ${mins}m</div>
-            <div class="mock-info-lbl">Time Limit</div>
-          </div>
-          <div class="mock-info-item">
-            <div class="mock-info-num">80%</div>
-            <div class="mock-info-lbl">Passing Score</div>
+      <div style="background:linear-gradient(135deg,#091B54,#1B3D8F,#2B4ACB);border-radius:18px;padding:18px 18px 14px;margin-bottom:12px;position:relative;overflow:hidden;box-shadow:0 4px 18px rgba(27,61,143,.35);">
+        <div style="position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.06) 1px,transparent 1px);background-size:18px 18px;pointer-events:none;"></div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;position:relative;">
+          <div style="font-size:34px;flex-shrink:0;">📋</div>
+          <div>
+            <div style="font-size:16px;font-weight:900;color:#fff;">${cfg.label} Mock Test</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:2px;">Full-length timed exam — just like the real CSE</div>
           </div>
         </div>
-        <button class="mock-start-btn" onclick="startMockTest()">Start Mock Test →</button>
+        <div style="display:flex;gap:0;background:rgba(0,0,0,.25);border-radius:12px;overflow:hidden;margin-bottom:14px;position:relative;">
+          <div style="flex:1;padding:10px 6px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#fff;">${cfg.items}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;margin-top:2px;">Questions</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.1);"></div>
+          <div style="flex:1;padding:10px 6px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#fff;">${hrs}h ${mins}m</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;margin-top:2px;">Time Limit</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.1);"></div>
+          <div style="flex:1;padding:10px 6px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#fff;">80%</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;margin-top:2px;">Passing Score</div>
+          </div>
+        </div>
+        <button onclick="startMockTest()" style="width:100%;padding:14px;border:none;border-radius:12px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);color:#fff;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.02em;position:relative;">Start Mock Test →</button>
       </div>`;
   }
 
@@ -2901,14 +2936,26 @@ function getFilteredAttempts() {
   }
 }
 
+// Returns color info for each filter type
+function filterColors(f) {
+  const map = {
+    all:  { bg: '#1B3D8F', text: '#fff' },
+    quiz: { bg: '#2B4ACB', text: '#fff' },
+    mock: { bg: '#C0272D', text: '#fff' },
+    mini: { bg: '#D97706', text: '#fff' },
+  };
+  return map[f] || map.all;
+}
+
 function setHistoryFilter(filter) {
   _historyFilter = filter;
-  // Update pill button styles
   document.querySelectorAll('.history-filter-btn').forEach(btn => {
-    const active = btn.dataset.filter === filter;
+    const f = btn.dataset.filter;
+    const c = filterColors(f);
+    const active = f === filter;
     btn.style.cssText = active
-      ? 'padding:5px 14px;border-radius:999px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:var(--primary);color:#fff;'
-      : 'padding:5px 14px;border-radius:999px;border:1.5px solid var(--primary);font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--primary);';
+      ? `padding:5px 14px;border-radius:999px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:${c.bg};color:${c.text};`
+      : `padding:5px 14px;border-radius:999px;border:1.5px solid ${c.bg};font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:${c.bg};`;
   });
   // Update subtitle
   const sub = document.getElementById('score-chart-sub');
@@ -3100,7 +3147,12 @@ function renderQuizHistory() {
   }
   if (_historySortAsc) items.reverse();
 
-  list.innerHTML = items.map(h => {
+  const SHOW_MIN = 3;
+  const total = items.length;
+  const expanded = list.dataset.expanded === '1';
+  const visible = expanded ? items : items.slice(0, SHOW_MIN);
+
+  const cardHtml = visible.map(h => {
     const pct = h.total_questions > 0 ? Math.round((h.score / h.total_questions) * 100) : 0;
     const scoreClass = pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low';
     const scoreEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📈' : '💪';
@@ -3111,7 +3163,6 @@ function renderQuizHistory() {
     const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
     const enc = encodeURIComponent;
-    // Type badge
     const cat = getExamCategory(h.exam_type);
     const typeBadge = cat === 'mock'
       ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEE2E2;color:#B91C1C;letter-spacing:.3px;">MOCK TEST</span>`
@@ -3135,7 +3186,22 @@ function renderQuizHistory() {
       </div>
     </div>`;
   }).join('');
+
+  const hidden = total - SHOW_MIN;
+  const toggleBtn = total > SHOW_MIN ? `
+    <div onclick="toggleHistoryExpand()" style="text-align:center;padding:10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--primary);">
+      ${expanded ? '▲ Show less' : `▼ Show ${hidden} more attempt${hidden !== 1 ? 's' : ''}`}
+    </div>` : '';
+
+  list.innerHTML = cardHtml + toggleBtn;
   renderQuizTabHistory();
+}
+
+function toggleHistoryExpand() {
+  const list = document.getElementById('quiz-history-list');
+  if (!list) return;
+  list.dataset.expanded = list.dataset.expanded === '1' ? '0' : '1';
+  renderQuizHistory();
 }
 
 function renderQuizTabHistory() {
@@ -3210,10 +3276,12 @@ async function deleteAttempt(id) {
 function setMockHistoryFilter(filter) {
   _mockHistoryFilter = filter;
   document.querySelectorAll('.mock-filter-btn').forEach(btn => {
-    const active = btn.dataset.filter === filter;
+    const f = btn.dataset.filter;
+    const c = filterColors(f);
+    const active = f === filter;
     btn.style.cssText = active
-      ? 'padding:5px 14px;border-radius:999px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:var(--primary);color:#fff;'
-      : 'padding:5px 14px;border-radius:999px;border:1.5px solid var(--primary);font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--primary);';
+      ? `padding:5px 14px;border-radius:999px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:${c.bg};color:${c.text};`
+      : `padding:5px 14px;border-radius:999px;border:1.5px solid ${c.bg};font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:${c.bg};`;
   });
   renderMockHistory();
 }
@@ -3414,7 +3482,7 @@ Object.assign(window, {
   toggleQuizSubject,
   startSubjectQuiz, startQuizForTopic, startQuizForDBTopic, startRandomQuiz, handleMiniCSE, startMockTest,
   selectAnswer, quizNext, retryQuiz, generateNewQuiz, exitQuizResult, confirmExitQuiz, toggleBookmark,
-  jumpToQuestion, sortHistory, renderScoreChart, setHistoryFilter, deleteAttempt,
+  jumpToQuestion, sortHistory, renderScoreChart, setHistoryFilter, deleteAttempt, toggleHistoryExpand,
   setMockHistoryFilter, renderMockHistory,
   loadFlashcards, flipCard, nextCard, prevCard,
   setBmFilter, removeBookmark,
