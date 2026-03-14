@@ -3100,7 +3100,8 @@ function renderQuizHistory() {
 
   let items = getFilteredAttempts();
   if (!items.length) {
-    list.innerHTML = '<div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">No quizzes yet. Start one!</div>';
+    const emptyMsgs = { all: 'No history yet. Start a quiz!', quiz: 'No quizzes yet.', mock: 'No mock tests yet.', mini: 'No mini mock tests yet.' };
+    list.innerHTML = `<div class="card" style="text-align:center;color:var(--ink-lt);font-size:13px;padding:24px;">${emptyMsgs[_historyFilter] || 'No history yet.'}</div>`;
     return;
   }
 
@@ -3127,22 +3128,45 @@ function renderQuizHistory() {
     const dateStr = d ? d.toLocaleDateString('en-PH', { timeZone: PH_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const timeStr = d ? d.toLocaleTimeString('en-PH', { timeZone: PH_TZ, hour: '2-digit', minute: '2-digit' }) : '';
     const enc = encodeURIComponent;
-    return `<div class="history-card score-${scoreClass}"
-      onclick="openAttemptDetail('${h.id}','${enc(h.exam_type || '')}',${h.score},${h.total_questions},'${enc(h.attempted_at || '')}')">
-      <div class="history-score-badge ${scoreClass}" style="flex-direction:column;gap:1px;">
-        <div style="font-size:14px;line-height:1;">${scoreEmoji}</div>
-        <div style="font-size:13px;font-weight:900;">${pct}%</div>
-      </div>
-      <div class="history-info">
-        <div class="history-topic">${icon} ${name}</div>
-        <div class="history-meta">${h.score}/${h.total_questions} correct &nbsp;·&nbsp; ${subj}</div>
-        <div class="history-meta" style="margin-top:1px;">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
-      </div>
-      <div class="history-details">
-        <div style="font-size:20px;color:var(--ink-lt);">›</div>
+    // Type badge
+    const isMock = h.exam_type === 'mock-test';
+    const isMini = h.exam_type === 'mini-cse';
+    const typeBadge = isMock
+      ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEE2E2;color:#B91C1C;letter-spacing:.3px;">MOCK TEST</span>`
+      : isMini
+        ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FEF3C7;color:#D97706;letter-spacing:.3px;">MINI MOCK</span>`
+        : `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#E8EEFF;color:#2B4ACB;letter-spacing:.3px;">QUIZ</span>`;
+    return `<div class="history-card score-${scoreClass}" style="position:relative;">
+      <div title="Delete this record"
+        onclick="event.stopPropagation();deleteAttempt('${h.id}')"
+        style="position:absolute;top:8px;right:8px;z-index:2;width:22px;height:22px;border-radius:50%;background:rgba(185,28,28,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#B91C1C;font-weight:900;line-height:1;">×</div>
+      <div class="history-card-inner" onclick="openAttemptDetail('${h.id}','${enc(h.exam_type || '')}',${h.score},${h.total_questions},'${enc(h.attempted_at || '')}')" style="display:flex;align-items:center;gap:10px;width:100%;padding-right:28px;cursor:pointer;">
+        <div class="history-score-badge ${scoreClass}" style="flex-direction:column;gap:1px;">
+          <div style="font-size:14px;line-height:1;">${scoreEmoji}</div>
+          <div style="font-size:13px;font-weight:900;">${pct}%</div>
+        </div>
+        <div class="history-info">
+          <div class="history-topic" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${icon} ${name} ${typeBadge}</div>
+          <div class="history-meta">${h.score}/${h.total_questions} correct &nbsp;·&nbsp; ${subj}</div>
+          <div class="history-meta" style="margin-top:1px;">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+async function deleteAttempt(id) {
+  if (!confirm('Delete this record? This cannot be undone.')) return;
+  if (!_sb) return;
+  try {
+    const { error } = await _sb.from('quiz_attempts').delete().eq('id', id);
+    if (error) { showToast('Delete failed: ' + error.message); return; }
+    // Remove from cache
+    _attemptHistoryCache = _attemptHistoryCache.filter(a => a.id !== id);
+    renderQuizHistory();
+    requestAnimationFrame(renderScoreChart);
+    showToast('Record deleted.');
+  } catch (e) { showToast('Delete failed.'); }
 }
 
 function sortHistory(field) {
@@ -3280,7 +3304,7 @@ Object.assign(window, {
   toggleQuizSubject,
   startSubjectQuiz, startQuizForTopic, startQuizForDBTopic, startRandomQuiz, handleMiniCSE, startMockTest,
   selectAnswer, quizNext, retryQuiz, generateNewQuiz, exitQuizResult, confirmExitQuiz, toggleBookmark,
-  jumpToQuestion, sortHistory, renderScoreChart, setHistoryFilter,
+  jumpToQuestion, sortHistory, renderScoreChart, setHistoryFilter, deleteAttempt,
   loadFlashcards, flipCard, nextCard, prevCard,
   setBmFilter, removeBookmark,
   showPremiumModal, showAbout, toggleDarkMode, toggleExamType, confirmLogout,
