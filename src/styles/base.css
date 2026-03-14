@@ -1,60 +1,69 @@
 /* ── DESIGN TOKENS — Light defaults ── */
 :root {
-  --primary: #2B4ACB;
-  --primary-dk: #1B2FA8;
-  --primary-lt: #E0E7FF;
-  --accent: #DC2626;
-  --accent-dk: #B91C1C;
-  --accent-lt: #FEE2E2;
+  /* CSC Navy palette */
+  --primary: #1B3D8F;
+  --primary-dk: #0F2460;
+  --primary-lt: #E8EEFF;
+  --primary-mid: #2B57C1;
+
+  /* CSC Red palette */
+  --accent: #C0272D;
+  --accent-dk: #991B1B;
+  --accent-lt: #FDEAEA;
+  --accent-mid: #E03535;
+
+  /* Gold */
   --gold: #F59F00;
   --gold-dk: #D97706;
   --gold-lt: #FEF3C7;
 
   /* Surface tokens — light defaults */
-  --bg-base: #EEF1FB;
+  --bg-base: #F3F6FF;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-hover: #F0F3FF;
-  --border-subtle: #D0D5EF;
-  --border-accent: #2B4ACB;
+  --bg-card-hover: #EEF3FF;
+  --border-subtle: #D8DFFE;
+  --border-accent: #1B3D8F;
 
-  /* Accent palette — same in both modes */
+  /* Accent palette */
   --accent-gold: #F59F00;
   --accent-gold-soft: #FEF3C7;
-  --accent-blue: #2B4ACB;
-  --accent-blue-soft: #E0E7FF;
+  --accent-blue: #1B3D8F;
+  --accent-blue-soft: #E8EEFF;
   --accent-teal: #0d9488;
-  --accent-coral: #DC2626;
+  --accent-coral: #C0272D;
 
   /* Text hierarchy — light */
-  --text-primary: #0F1340;
-  --text-secondary: #3D3F6A;
-  --text-muted: #8B8CA8;
+  --text-primary: #091B54;
+  --text-secondary: #2D3872;
+  --text-muted: #7B82AA;
 
   /* Semantic helpers */
   --green: #22C55E; --green-dk: #16A34A; --green-lt: #DCFCE7; --green-mid: #86EFAC;
-  --teal: #2B4ACB; --teal-dk: #1B2FA8; --teal-lt: #E0E7FF;
-  --blue: #3B5BDB; --blue-dk: #2B4ACB; --blue-lt: #E0E7FF;
+  --teal: #1B3D8F; --teal-dk: #0F2460; --teal-lt: #E8EEFF;
+  --blue: #2B57C1; --blue-dk: #1B3D8F; --blue-lt: #E8EEFF;
   --yellow: #F59F00; --yellow-dk: #D97706; --yellow-lt: #FEF3C7;
   --orange: #FB923C; --orange-dk: #EA580C; --orange-lt: #FFF7ED;
-  --red: #DC2626; --red-dk: #B91C1C; --red-lt: #FEE2E2;
+  --red: #C0272D; --red-dk: #991B1B; --red-lt: #FDEAEA;
   --purple: #7950F2; --purple-dk: #6741D9; --purple-lt: #F3F0FF;
   --pink: #F06595; --pink-dk: #D6336C; --pink-lt: #FFDEEB;
 
   /* Typography */
-  --ink: #0F1340;
-  --ink-mid: #3D3F6A;
-  --ink-lt: #8B8CA8;
+  --ink: #091B54;
+  --ink-mid: #2D3872;
+  --ink-lt: #7B82AA;
 
   /* Surfaces */
   --card: #ffffff;
-  --bg: #EEF1FB;
-  --border: #D0D5EF;
+  --bg: #F3F6FF;
+  --border: #D8DFFE;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 4px rgba(27,47,168,.07);
-  --shadow: 0 2px 12px rgba(27,47,168,.10);
-  --shadow-lg: 0 8px 32px rgba(27,47,168,.16);
+  /* Shadows — multi-layer for premium feel */
+  --shadow-sm: 0 1px 4px rgba(27,61,143,.06), 0 1px 2px rgba(0,0,0,.03);
+  --shadow: 0 4px 16px rgba(27,61,143,.09), 0 1px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 32px rgba(27,61,143,.14), 0 2px 8px rgba(0,0,0,.06);
+  --shadow-xl: 0 16px 48px rgba(27,61,143,.18), 0 4px 12px rgba(0,0,0,.08);
+
   --nav-h: 72px;
   --font: 'Nunito', sans-serif;
 }
@@ -109,18 +118,18 @@ a {
   margin: 0 auto;
   position: relative;
   background: var(--bg);
-  box-shadow: 0 0 60px rgba(59,91,219,.12);
+  box-shadow: 0 0 80px rgba(27,61,143,.15), 0 0 0 1px rgba(27,61,143,.06);
 }
 
-/* Desktop: add subtle frame */
+/* Desktop: deep navy chrome */
 @media (min-width: 600px) {
   body {
-    background: #0a1550;  /* Dark chrome even in light mode */
+    background: linear-gradient(145deg, #040E2E 0%, #091B54 50%, #0F2460 100%);
   }
 
   #app-root {
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    border-left: 1px solid rgba(43,87,193,.2);
+    border-right: 1px solid rgba(43,87,193,.2);
   }
 }
 
@@ -190,7 +199,7 @@ a {
   border-radius: 16px;
   padding: 16px;
   box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(216,223,254,.7);
 }
 
 /* ── KEYFRAMES ── */
@@ -265,12 +274,13 @@ a {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(244,245,251,.94);
+  background: rgba(243,246,255,.95);
   z-index: 999;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 16px;
+  backdrop-filter: blur(4px);
 }
 
 #loading-overlay.show {
@@ -298,10 +308,12 @@ a {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .65);
+  background: rgba(9,27,84,.55);
   z-index: 900;
   align-items: flex-end;
   justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 #modal-overlay.show {
@@ -311,13 +323,14 @@ a {
 
 #modal-box {
   background: var(--bg-surface);
-  border-radius: 24px 24px 0 0;
+  border-radius: 28px 28px 0 0;
   padding: 28px 24px 40px;
   width: 100%;
   max-width: 560px;
   animation: fadeUp .25s ease;
   border: 1px solid var(--border-subtle);
   border-bottom: none;
+  box-shadow: 0 -8px 48px rgba(27,61,143,.15);
 }
 
 .modal-title {
@@ -346,12 +359,13 @@ a {
   border-radius: 999px;
   font-size: 15px;
   font-weight: 800;
-  transition: opacity .15s;
+  transition: opacity .15s, transform .15s;
 }
 
 .modal-btn.primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
   color: #fff;
+  box-shadow: 0 4px 16px rgba(27,61,143,.3);
 }
 
 .modal-btn.secondary {
@@ -360,12 +374,13 @@ a {
 }
 
 .modal-btn.danger {
-  background: var(--red-lt);
-  color: var(--red-dk);
+  background: var(--accent-lt);
+  color: var(--accent-dk);
 }
 
 .modal-btn:active {
   opacity: .8;
+  transform: scale(.98);
 }
 
 /* ── TOAST ── */
@@ -375,15 +390,16 @@ a {
   bottom: calc(var(--nav-h) + 16px);
   left: 50%;
   transform: translateX(-50%);
-  background: #0f1340;
+  background: linear-gradient(135deg, #091B54, #1B3D8F);
   color: #ffffff;
   font-size: 13px;
   font-weight: 700;
-  padding: 10px 20px;
+  padding: 10px 22px;
   border-radius: 999px;
   z-index: 800;
   white-space: nowrap;
   box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255,255,255,.12);
 }
 
 #toast.show {
@@ -394,11 +410,10 @@ a {
 /* ── BOTTOM NAV ── */
 #bottom-nav {
   display: flex;
-  /* taller nav for easier tapping */
   height: clamp(64px, 12vw, 76px);
-  background: var(--card);
+  background: #fff;
   border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 12px rgba(59,91,219,.08);
+  box-shadow: 0 -4px 24px rgba(27,61,143,.08), 0 -1px 0 rgba(27,61,143,.04);
   position: relative;
   z-index: 10;
 }
@@ -410,7 +425,6 @@ a {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  /* label: responsive, never below 8 px */
   font-size: clamp(8px, 2vw, 10px);
   font-weight: 800;
   color: var(--ink-lt);
@@ -422,18 +436,18 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Pill indicator on active tab */
+/* Red pill indicator on active tab */
 .nav-item::before {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%) scaleX(0);
-  width: 40px;
+  width: 44px;
   height: 3px;
   border-radius: 0 0 6px 6px;
   background: var(--accent);
-  transition: transform .22s cubic-bezier(.34,1.56,.64,1);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
 }
 
 .nav-item.active::before {
@@ -441,11 +455,10 @@ a {
 }
 
 .nav-icon {
-  /* scales between 26 px on narrow screens and 30 px on normal ones */
   font-size: clamp(26px, 7vw, 30px);
   line-height: 1;
   transition: transform .2s, filter .2s;
-  filter: grayscale(25%) opacity(65%);
+  filter: grayscale(25%) opacity(55%);
 }
 
 .nav-item.active .nav-icon {
@@ -568,11 +581,11 @@ body.dark .btn-outline { border-color: rgba(255,255,255,0.09); }
 }
 
 .btn-green {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
   color: #fff;
   padding: 14px 24px;
   font-size: 15px;
-  box-shadow: 0 4px 0 var(--primary-dk);
+  box-shadow: 0 4px 0 var(--primary-dk), 0 4px 16px rgba(27,61,143,.3);
 }
 
 .btn-outline {
@@ -605,5 +618,5 @@ body.dark .btn-outline { border-color: rgba(255,255,255,0.09); }
   height: 100%;
   border-radius: 999px;
   transition: width .4s;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
+  background: linear-gradient(90deg, var(--primary), #2B57C1, var(--accent-teal));
 }

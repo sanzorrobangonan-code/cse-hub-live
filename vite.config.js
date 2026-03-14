@@ -7,8 +7,8 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        index: 'public/index.html',
-        home: 'public/home.html',
+        index: 'index.html',
+        home: 'home.html',
       }
     }
   },

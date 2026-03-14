@@ -66,7 +66,7 @@
 /* Logo / branding — horizontal row: logo on left, title beside it */
 .sidebar-logo-section {
   padding: 14px 18px;
-  background: linear-gradient(135deg, #0C1E78 0%, #1B2FA8 55%, #2B4ACB 100%);
+  background: linear-gradient(145deg, #040E2E 0%, #091B54 45%, #1B3D8F 80%, #2B57C1 100%);
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -174,10 +174,11 @@
 /* Streak card */
 .sidebar-streak-card {
   margin: 8px 12px;
-  background: linear-gradient(135deg, #0C1E78, #1B2FA8);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(145deg, #091B54, #1B3D8F);
+  border: 1px solid rgba(255,255,255,.08);
   border-radius: 14px;
   padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(9,27,84,.3);
 }
 
 .sidebar-streak-row {
@@ -228,13 +229,14 @@
 /* Recommendation mini card */
 .sidebar-rec-card {
   margin: 4px 12px 8px;
-  background: linear-gradient(135deg, #991B1B, #DC2626);
+  background: linear-gradient(135deg, #7D1418, #C0272D, #E03535);
   border-radius: 14px;
   padding: 14px 16px;
   cursor: pointer;
   transition: transform .15s, box-shadow .15s;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 14px rgba(192,39,45,.3);
 }
 
 .sidebar-rec-card::before {
@@ -248,7 +250,7 @@
 
 .sidebar-rec-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(185, 28, 28, .4);
+  box-shadow: 0 8px 24px rgba(192,39,45,.45);
 }
 
 .sidebar-rec-label {
@@ -329,6 +331,7 @@
   position: sticky;
   top: 0;
   z-index: 5;
+  box-shadow: 0 4px 24px rgba(9,27,84,.25);
 }
 
 /* Wrapper for the full greeting + streak card */
